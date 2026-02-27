@@ -26,17 +26,28 @@ function formatValue(value, format) {
   }
 }
 
-// Default columns to show
+// Default columns to show (excluding 'watch' which is handled separately)
 const DEFAULT_COLUMNS = [
   'ticker', 'name', 'sector', 'market_cap', 'forward_pe', 'ev_to_ebitda',
   'gross_margin', 'operating_margin', 'roic', 'revenue_growth_yoy',
   'forward_pe_vs_5yr_pct', 'gross_margin_vs_5yr_pct',
 ]
 
+const COLORS = {
+  bg: '#0d1117',
+  card: '#161b22',
+  border: '#30363d',
+  text: '#e6edf3',
+  secondary: '#8b949e',
+  accent: '#3b82f6',
+  green: '#3fb950',
+  red: '#f85149',
+}
+
 const styles = {
   container: {
-    backgroundColor: '#111827',
-    border: '1px solid #1e293b',
+    backgroundColor: COLORS.card,
+    border: `1px solid ${COLORS.border}`,
     borderRadius: '10px',
     overflow: 'hidden',
   },
@@ -45,11 +56,11 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '14px 20px',
-    borderBottom: '1px solid #1e293b',
+    borderBottom: `1px solid ${COLORS.border}`,
   },
   count: {
     fontSize: '14px',
-    color: '#94a3b8',
+    color: COLORS.secondary,
   },
   tableWrap: {
     overflowX: 'auto',
@@ -62,47 +73,61 @@ const styles = {
   th: {
     padding: '10px 14px',
     textAlign: 'left',
-    color: '#94a3b8',
+    color: COLORS.secondary,
     fontWeight: '600',
     fontSize: '11px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    borderBottom: '1px solid #1e293b',
+    borderBottom: `1px solid ${COLORS.border}`,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     userSelect: 'none',
   },
   td: {
     padding: '10px 14px',
-    borderBottom: '1px solid #1e293b0a',
+    borderBottom: `1px solid ${COLORS.border}33`,
     whiteSpace: 'nowrap',
-    color: '#e2e8f0',
+    color: COLORS.text,
   },
   trHover: {
-    backgroundColor: '#1e293b',
+    backgroundColor: COLORS.bg,
+  },
+  watchBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    color: COLORS.secondary,
+    transition: 'color 0.2s',
+    lineHeight: '1',
+  },
+  watchBtnActive: {
+    color: COLORS.accent,
   },
   ticker: {
     fontWeight: '700',
-    color: '#60a5fa',
+    color: COLORS.accent,
   },
   positive: {
-    color: '#34d399',
+    color: COLORS.green,
   },
   negative: {
-    color: '#f87171',
+    color: COLORS.red,
   },
   pagination: {
     display: 'flex',
     justifyContent: 'center',
     gap: '8px',
     padding: '14px',
-    borderTop: '1px solid #1e293b',
+    borderTop: `1px solid ${COLORS.border}`,
+    flexWrap: 'wrap',
   },
   pageBtn: {
     padding: '6px 14px',
-    backgroundColor: '#1e293b',
-    color: '#94a3b8',
-    border: '1px solid #334155',
+    backgroundColor: COLORS.bg,
+    color: COLORS.secondary,
+    border: `1px solid ${COLORS.border}`,
     borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '13px',
@@ -110,12 +135,21 @@ const styles = {
   empty: {
     padding: '60px 20px',
     textAlign: 'center',
-    color: '#64748b',
+    color: COLORS.secondary,
     fontSize: '15px',
   },
 }
 
-export default function ResultsTable({ data, fields, onSort, sortBy, sortDir, onPageChange }) {
+export default function ResultsTable({
+  data,
+  fields,
+  onSort,
+  sortBy,
+  sortDir,
+  onPageChange,
+  watchedTickers = new Set(),
+  onToggleWatch = () => {},
+}) {
   const [hoveredRow, setHoveredRow] = useState(null)
 
   if (!data) {
@@ -163,6 +197,7 @@ export default function ResultsTable({ data, fields, onSort, sortBy, sortDir, on
         <table style={styles.table}>
           <thead>
             <tr>
+              <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>★</th>
               {columns.map(col => (
                 <th
                   key={col}
@@ -176,32 +211,47 @@ export default function ResultsTable({ data, fields, onSort, sortBy, sortDir, on
             </tr>
           </thead>
           <tbody>
-            {results.map((row, i) => (
-              <tr
-                key={row.ticker + i}
-                style={hoveredRow === i ? styles.trHover : {}}
-                onMouseEnter={() => setHoveredRow(i)}
-                onMouseLeave={() => setHoveredRow(null)}
-              >
-                {columns.map(col => {
-                  const val = row[col]
-                  const format = fields[col]?.format
-                  const colorStyle = getColor(val, format)
-                  return (
-                    <td
-                      key={col}
+            {results.map((row, i) => {
+              const isWatched = watchedTickers.has(row.ticker)
+              return (
+                <tr
+                  key={row.ticker + i}
+                  style={hoveredRow === i ? styles.trHover : {}}
+                  onMouseEnter={() => setHoveredRow(i)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                >
+                  <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <button
                       style={{
-                        ...styles.td,
-                        ...(col === 'ticker' ? styles.ticker : {}),
-                        ...colorStyle,
+                        ...styles.watchBtn,
+                        ...(isWatched ? styles.watchBtnActive : {}),
                       }}
+                      onClick={() => onToggleWatch(row.ticker)}
+                      title={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
                     >
-                      {formatValue(val, format)}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
+                      {isWatched ? '★' : '☆'}
+                    </button>
+                  </td>
+                  {columns.map(col => {
+                    const val = row[col]
+                    const format = fields[col]?.format
+                    const colorStyle = getColor(val, format)
+                    return (
+                      <td
+                        key={col}
+                        style={{
+                          ...styles.td,
+                          ...(col === 'ticker' ? styles.ticker : {}),
+                          ...colorStyle,
+                        }}
+                      >
+                        {formatValue(val, format)}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -215,7 +265,7 @@ export default function ResultsTable({ data, fields, onSort, sortBy, sortDir, on
           >
             Previous
           </button>
-          <span style={{ color: '#64748b', fontSize: '13px', lineHeight: '32px' }}>
+          <span style={{ color: COLORS.secondary, fontSize: '13px', lineHeight: '32px' }}>
             Page {currentPage} of {totalPages}
           </span>
           <button

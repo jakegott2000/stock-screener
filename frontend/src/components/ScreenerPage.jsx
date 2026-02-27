@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import FilterBuilder from './FilterBuilder'
 import ResultsTable from './ResultsTable'
-import { runScreen, getFields, getStats, triggerIngestion, triggerQuoteUpdate } from '../api'
+import Watchlist from './Watchlist'
+import { runScreen, getFields, getStats, triggerIngestion, triggerQuoteUpdate, getWatchlistTickers, addToWatchlist, removeFromWatchlist } from '../api'
+
+const COLORS = {
+  bg: '#0d1117',
+  card: '#161b22',
+  border: '#30363d',
+  text: '#e6edf3',
+  secondary: '#8b949e',
+  accent: '#3b82f6',
+  green: '#3fb950',
+  red: '#f85149',
+}
 
 const styles = {
   page: {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '20px 24px',
+    backgroundColor: COLORS.bg,
+    minHeight: '100vh',
   },
   topBar: {
     display: 'flex',
@@ -19,43 +33,88 @@ const styles = {
   },
   stats: {
     fontSize: '13px',
-    color: '#64748b',
+    color: COLORS.secondary,
   },
   adminBtns: {
     display: 'flex',
     gap: '8px',
+    flexWrap: 'wrap',
   },
   adminBtn: {
     padding: '6px 14px',
-    backgroundColor: '#1e293b',
-    color: '#94a3b8',
-    border: '1px solid #334155',
+    backgroundColor: COLORS.card,
+    color: COLORS.secondary,
+    border: `1px solid ${COLORS.border}`,
     borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '12px',
+    transition: 'all 0.2s',
+  },
+  tabsContainer: {
+    display: 'flex',
+    gap: '0px',
+    marginBottom: '16px',
+    borderBottom: `1px solid ${COLORS.border}`,
+  },
+  tab: {
+    padding: '12px 16px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: COLORS.secondary,
+    borderBottom: `2px solid transparent`,
+    transition: 'all 0.2s',
+    position: 'relative',
+  },
+  tabActive: {
+    color: COLORS.text,
+    borderBottomColor: COLORS.accent,
+  },
+  tabBadge: {
+    display: 'inline-block',
+    marginLeft: '6px',
+    padding: '2px 6px',
+    backgroundColor: COLORS.accent,
+    color: COLORS.bg,
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
   },
   presetBar: {
     display: 'flex',
     gap: '8px',
     marginBottom: '16px',
     flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  presetLabel: {
+    fontSize: '12px',
+    color: COLORS.secondary,
   },
   preset: {
     padding: '6px 14px',
-    backgroundColor: '#1e293b',
-    color: '#94a3b8',
-    border: '1px solid #334155',
+    backgroundColor: COLORS.card,
+    color: COLORS.secondary,
+    border: `1px solid ${COLORS.border}`,
     borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '12px',
+    transition: 'all 0.2s',
+  },
+  presetHover: {
+    borderColor: COLORS.accent,
+    color: COLORS.text,
   },
   message: {
-    padding: '10px 16px',
-    backgroundColor: '#064e3b',
-    color: '#6ee7b7',
+    padding: '12px 16px',
+    backgroundColor: COLORS.green + '1a',
+    color: COLORS.green,
     borderRadius: '8px',
     fontSize: '13px',
     marginBottom: '12px',
+    border: `1px solid ${COLORS.green}33`,
   },
 }
 
@@ -92,6 +151,7 @@ const PRESETS = [
 ]
 
 export default function ScreenerPage() {
+  const [activeTab, setActiveTab] = useState('screener')
   const [fields, setFields] = useState({})
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -100,11 +160,25 @@ export default function ScreenerPage() {
   const [lastFilters, setLastFilters] = useState([])
   const [stats, setStats] = useState(null)
   const [message, setMessage] = useState('')
+  const [watchedTickers, setWatchedTickers] = useState(new Set())
+  const [watchlistCount, setWatchlistCount] = useState(0)
 
   useEffect(() => {
     getFields().then(setFields).catch(() => {})
     getStats().then(setStats).catch(() => {})
+    fetchWatchlistTickers()
   }, [])
+
+  const fetchWatchlistTickers = async () => {
+    try {
+      const tickers = await getWatchlistTickers()
+      const tickerSet = new Set(tickers || [])
+      setWatchedTickers(tickerSet)
+      setWatchlistCount(tickerSet.size)
+    } catch (err) {
+      console.error('Failed to fetch watchlist tickers:', err)
+    }
+  }
 
   const handleScreen = async (filters, sort = sortBy, dir = sortDir, offset = 0) => {
     setLoading(true)
@@ -158,6 +232,26 @@ export default function ScreenerPage() {
     }
   }
 
+  const handleToggleWatch = async (ticker) => {
+    try {
+      if (watchedTickers.has(ticker)) {
+        await removeFromWatchlist(ticker)
+        const newSet = new Set(watchedTickers)
+        newSet.delete(ticker)
+        setWatchedTickers(newSet)
+        setWatchlistCount(newSet.size)
+      } else {
+        await addToWatchlist(ticker)
+        const newSet = new Set(watchedTickers)
+        newSet.add(ticker)
+        setWatchedTickers(newSet)
+        setWatchlistCount(newSet.size)
+      }
+    } catch (err) {
+      console.error('Failed to toggle watchlist:', err)
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.topBar}>
@@ -170,27 +264,66 @@ export default function ScreenerPage() {
         </div>
       </div>
 
-      {message && <div style={styles.message}>{message}</div>}
-
-      <div style={styles.presetBar}>
-        <span style={{ fontSize: '12px', color: '#64748b', lineHeight: '30px' }}>Presets:</span>
-        {PRESETS.map((p, i) => (
-          <button key={i} style={styles.preset} onClick={() => runPreset(p)} title={p.description}>
-            {p.name}
-          </button>
-        ))}
+      <div style={styles.tabsContainer}>
+        <button
+          style={{
+            ...styles.tab,
+            ...(activeTab === 'screener' ? styles.tabActive : {}),
+          }}
+          onClick={() => setActiveTab('screener')}
+        >
+          Screener
+        </button>
+        <button
+          style={{
+            ...styles.tab,
+            ...(activeTab === 'watchlist' ? styles.tabActive : {}),
+          }}
+          onClick={() => setActiveTab('watchlist')}
+        >
+          Watchlist
+          {watchlistCount > 0 && (
+            <span style={styles.tabBadge}>{watchlistCount}</span>
+          )}
+        </button>
       </div>
 
-      <FilterBuilder onRunScreen={handleScreen} loading={loading} />
+      {message && <div style={styles.message}>{message}</div>}
 
-      <ResultsTable
-        data={data}
-        fields={fields}
-        onSort={handleSort}
-        sortBy={sortBy}
-        sortDir={sortDir}
-        onPageChange={handlePageChange}
-      />
+      {activeTab === 'screener' && (
+        <>
+          <div style={styles.presetBar}>
+            <span style={styles.presetLabel}>Presets:</span>
+            {PRESETS.map((p, i) => (
+              <button
+                key={i}
+                style={styles.preset}
+                onClick={() => runPreset(p)}
+                title={p.description}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          <FilterBuilder onRunScreen={handleScreen} loading={loading} />
+
+          <ResultsTable
+            data={data}
+            fields={fields}
+            onSort={handleSort}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onPageChange={handlePageChange}
+            watchedTickers={watchedTickers}
+            onToggleWatch={handleToggleWatch}
+          />
+        </>
+      )}
+
+      {activeTab === 'watchlist' && (
+        <Watchlist />
+      )}
     </div>
   )
 }

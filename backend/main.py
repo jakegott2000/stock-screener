@@ -147,6 +147,72 @@ def get_stats(user: str = Depends(get_current_user), db=Depends(get_db)):
     }
 
 
+# ===== Watchlist Endpoints =====
+
+class WatchlistAddRequest(BaseModel):
+    ticker: str
+    notes: str = ""
+
+
+class WatchlistUpdateRequest(BaseModel):
+    notes: str = ""
+
+
+@app.get("/api/watchlist")
+def get_watchlist(user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import WatchlistItem, ScreenerData
+    items = db.query(WatchlistItem).order_by(WatchlistItem.added_at.desc()).all()
+    result = []
+    for item in items:
+        sd = db.query(ScreenerData).filter(ScreenerData.ticker == item.ticker).first()
+        row = {
+            "id": item.id,
+            "ticker": item.ticker,
+            "notes": item.notes,
+            "added_at": item.added_at.isoformat() if item.added_at else None,
+            "name": sd.name if sd else None,
+            "market_cap": sd.market_cap if sd else None,
+            "last_price": sd.last_price if sd else None,
+            "forward_pe": sd.forward_pe if sd else None,
+            "ev_to_ebitda": sd.ev_to_ebitda if sd else None,
+            "gross_margin": sd.gross_margin if sd else None,
+            "revenue_growth_yoy": sd.revenue_growth_yoy if sd else None,
+            "sector": sd.sector if sd else None,
+        }
+        result.append(row)
+    return result
+
+
+@app.post("/api/watchlist")
+def add_to_watchlist(req: WatchlistAddRequest, user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import WatchlistItem
+    existing = db.query(WatchlistItem).filter(WatchlistItem.ticker == req.ticker.upper()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already in watchlist")
+    item = WatchlistItem(ticker=req.ticker.upper(), notes=req.notes)
+    db.add(item)
+    db.commit()
+    return {"status": "added", "ticker": req.ticker.upper()}
+
+
+@app.delete("/api/watchlist/{ticker}")
+def remove_from_watchlist(ticker: str, user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import WatchlistItem
+    item = db.query(WatchlistItem).filter(WatchlistItem.ticker == ticker.upper()).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Not in watchlist")
+    db.delete(item)
+    db.commit()
+    return {"status": "removed", "ticker": ticker.upper()}
+
+
+@app.get("/api/watchlist/tickers")
+def get_watchlist_tickers(user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import WatchlistItem
+    items = db.query(WatchlistItem.ticker).all()
+    return [i[0] for i in items]
+
+
 # ===== Serve Frontend =====
 
 # In production, the built frontend will be at /app/frontend/dist

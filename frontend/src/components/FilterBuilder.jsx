@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { getFields } from '../api'
 
 const OPERATORS = [
@@ -23,98 +23,170 @@ const FIELD_GROUPS = {
   'Info': ['sector', 'industry', 'country', 'exchange'],
 }
 
+const EMPTY_FILTER = { field: 'market_cap', operator: 'gte', value: '', value2: '' }
+
 const styles = {
   container: {
-    backgroundColor: '#111827',
-    border: '1px solid #1e293b',
-    borderRadius: '10px',
-    padding: '20px',
-    marginBottom: '16px',
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '12px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    transition: 'all 0.3s ease',
   },
   title: {
-    fontSize: '15px',
-    fontWeight: '600',
-    color: '#e2e8f0',
-    marginBottom: '16px',
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#e6edf3',
+    marginBottom: '24px',
+    letterSpacing: '-0.5px',
   },
   filterRow: {
     display: 'flex',
-    gap: '10px',
+    gap: '12px',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: '16px',
     flexWrap: 'wrap',
+    padding: '16px',
+    backgroundColor: '#161b22',
+    borderRadius: '8px',
+    border: '1px solid #30363d',
+    transition: 'all 0.2s ease',
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
   },
-  select: {
-    padding: '8px 12px',
-    backgroundColor: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: '6px',
-    color: '#e2e8f0',
-    fontSize: '13px',
+  fieldSelect: {
+    flex: '1 1 220px',
+    padding: '10px 14px',
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    color: '#e6edf3',
+    fontSize: '14px',
+    fontWeight: '500',
     outline: 'none',
-    minWidth: '180px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '160px',
+  },
+  fieldSelectFocus: {
+    borderColor: '#3b82f6',
+    boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
+  },
+  operatorSelect: {
+    flex: '0 0 auto',
+    padding: '10px 14px',
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    color: '#e6edf3',
+    fontSize: '14px',
+    fontWeight: '500',
+    outline: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '90px',
   },
   input: {
-    padding: '8px 12px',
-    backgroundColor: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: '6px',
-    color: '#e2e8f0',
-    fontSize: '13px',
+    flex: '0 1 140px',
+    padding: '10px 14px',
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    color: '#e6edf3',
+    fontSize: '14px',
     outline: 'none',
-    width: '120px',
+    transition: 'all 0.2s ease',
+    minWidth: '100px',
+  },
+  inputFocus: {
+    borderColor: '#3b82f6',
+    boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
+    backgroundColor: '#1c2333',
+  },
+  andLabel: {
+    color: '#8b949e',
+    fontSize: '14px',
+    fontWeight: '500',
+    flex: '0 0 auto',
   },
   removeBtn: {
-    padding: '6px 10px',
-    backgroundColor: '#7f1d1d',
-    color: '#fca5a5',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '12px',
-  },
-  addBtn: {
-    padding: '8px 16px',
-    backgroundColor: '#1e3a5f',
-    color: '#60a5fa',
-    border: '1px solid #2563eb',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500',
-    marginRight: '10px',
-  },
-  runBtn: {
-    padding: '8px 20px',
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
+    flex: '0 0 auto',
+    padding: '10px 16px',
+    backgroundColor: 'rgba(248, 81, 73, 0.15)',
+    color: '#f85149',
+    border: '1px solid rgba(248, 81, 73, 0.3)',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '13px',
     fontWeight: '600',
+    transition: 'all 0.2s ease',
+  },
+  removeBtnHover: {
+    backgroundColor: 'rgba(248, 81, 73, 0.25)',
+    borderColor: '#f85149',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#8b949e',
+    marginTop: '16px',
+    marginBottom: '20px',
+    paddingLeft: '4px',
+    lineHeight: '1.5',
   },
   actions: {
     display: 'flex',
-    gap: '10px',
-    marginTop: '14px',
+    gap: '12px',
+    marginTop: '20px',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
-  hint: {
-    fontSize: '11px',
-    color: '#64748b',
-    marginTop: '2px',
+  addBtn: {
+    padding: '11px 20px',
+    backgroundColor: '#0d1117',
+    color: '#3b82f6',
+    border: '1px solid #3b82f6',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
   },
-  optgroup: {
-    color: '#94a3b8',
+  addBtnHover: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  runBtn: {
+    padding: '11px 28px',
+    backgroundColor: '#3b82f6',
+    backgroundImage: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '700',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+  },
+  runBtnHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 16px rgba(59, 130, 246, 0.4)',
+  },
+  runBtnActive: {
+    transform: 'translateY(0)',
   },
 }
-
-const EMPTY_FILTER = { field: 'market_cap', operator: 'gte', value: '', value2: '' }
 
 export default function FilterBuilder({ onRunScreen, loading }) {
   const [fields, setFields] = useState({})
   const [filters, setFilters] = useState([{ ...EMPTY_FILTER }])
+  const [focusedIndex, setFocusedIndex] = useState(null)
+  const [hoveredRemoveBtn, setHoveredRemoveBtn] = useState(null)
+  const [hoveredAddBtn, setHoveredAddBtn] = useState(false)
+  const [hoveredRunBtn, setHoveredRunBtn] = useState(false)
 
   useEffect(() => {
     getFields().then(setFields).catch(() => {})
@@ -164,19 +236,29 @@ export default function FilterBuilder({ onRunScreen, loading }) {
     if (e.key === 'Enter') handleRun()
   }
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
   return (
     <div style={styles.container}>
-      <div style={styles.title}>Screen Filters</div>
+      <div style={styles.title}>Filter Criteria</div>
 
       {filters.map((filter, i) => (
-        <div key={i} style={styles.filterRow}>
+        <div key={i} style={{
+          ...styles.filterRow,
+          ...(isMobile && { flexDirection: 'column', alignItems: 'stretch' }),
+        }}>
           <select
-            style={styles.select}
+            style={{
+              ...styles.fieldSelect,
+              ...(focusedIndex === `field-${i}` && styles.fieldSelectFocus),
+            }}
             value={filter.field}
             onChange={(e) => updateFilter(i, 'field', e.target.value)}
+            onFocus={() => setFocusedIndex(`field-${i}`)}
+            onBlur={() => setFocusedIndex(null)}
           >
             {Object.entries(FIELD_GROUPS).map(([group, fieldNames]) => (
-              <optgroup key={group} label={group} style={styles.optgroup}>
+              <optgroup key={group} label={group}>
                 {fieldNames.filter(fn => fields[fn]).map(fn => (
                   <option key={fn} value={fn}>{fields[fn]?.label || fn}</option>
                 ))}
@@ -185,9 +267,14 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           </select>
 
           <select
-            style={{ ...styles.select, minWidth: '80px' }}
+            style={{
+              ...styles.operatorSelect,
+              ...(focusedIndex === `operator-${i}` && styles.fieldSelectFocus),
+            }}
             value={filter.operator}
             onChange={(e) => updateFilter(i, 'operator', e.target.value)}
+            onFocus={() => setFocusedIndex(`operator-${i}`)}
+            onBlur={() => setFocusedIndex(null)}
           >
             {OPERATORS.map(op => (
               <option key={op.value} value={op.value}>{op.label}</option>
@@ -195,29 +282,49 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           </select>
 
           <input
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...(focusedIndex === `value-${i}` && styles.inputFocus),
+            }}
             type={fields[filter.field]?.type === 'string' ? 'text' : 'number'}
             placeholder={fields[filter.field]?.format === 'currency_compact' ? 'e.g. 800000000' : 'Value'}
             value={filter.value}
             onChange={(e) => updateFilter(i, 'value', e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setFocusedIndex(`value-${i}`)}
+            onBlur={() => setFocusedIndex(null)}
           />
 
           {filter.operator === 'between' && (
             <>
-              <span style={{ color: '#64748b', fontSize: '13px' }}>and</span>
+              <span style={styles.andLabel}>and</span>
               <input
-                style={styles.input}
+                style={{
+                  ...styles.input,
+                  ...(focusedIndex === `value2-${i}` && styles.inputFocus),
+                }}
                 type="number"
                 placeholder="Max"
                 value={filter.value2}
                 onChange={(e) => updateFilter(i, 'value2', e.target.value)}
                 onKeyDown={handleKeyDown}
+                onFocus={() => setFocusedIndex(`value2-${i}`)}
+                onBlur={() => setFocusedIndex(null)}
               />
             </>
           )}
 
-          <button style={styles.removeBtn} onClick={() => removeFilter(i)}>Remove</button>
+          <button
+            style={{
+              ...styles.removeBtn,
+              ...(hoveredRemoveBtn === i && styles.removeBtnHover),
+            }}
+            onClick={() => removeFilter(i)}
+            onMouseEnter={() => setHoveredRemoveBtn(i)}
+            onMouseLeave={() => setHoveredRemoveBtn(null)}
+          >
+            Remove
+          </button>
         </div>
       ))}
 
@@ -226,10 +333,26 @@ export default function FilterBuilder({ onRunScreen, loading }) {
       </div>
 
       <div style={styles.actions}>
-        <button style={styles.addBtn} onClick={addFilter}>+ Add Filter</button>
         <button
-          style={{ ...styles.runBtn, opacity: loading ? 0.7 : 1 }}
+          style={{
+            ...styles.addBtn,
+            ...(hoveredAddBtn && styles.addBtnHover),
+          }}
+          onClick={addFilter}
+          onMouseEnter={() => setHoveredAddBtn(true)}
+          onMouseLeave={() => setHoveredAddBtn(false)}
+        >
+          + Add Filter
+        </button>
+        <button
+          style={{
+            ...styles.runBtn,
+            ...(hoveredRunBtn && !loading && styles.runBtnHover),
+            ...(loading && { opacity: 0.75 }),
+          }}
           onClick={handleRun}
+          onMouseEnter={() => setHoveredRunBtn(true)}
+          onMouseLeave={() => setHoveredRunBtn(false)}
           disabled={loading}
         >
           {loading ? 'Screening...' : 'Run Screen'}

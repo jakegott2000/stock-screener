@@ -184,3 +184,13 @@ class ScreenerData(Base):
         Index("ix_screener_sector", "sector"),
         Index("ix_screener_country", "country"),
     )
+
+
+class WatchlistItem(Base):
+    """User watchlist — stores tickers the user wants to track."""
+    __tablename__ = "watchlist"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(20), nullable=False, unique=True, index=True)
+    notes = Column(Text, default="")
+    added_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
