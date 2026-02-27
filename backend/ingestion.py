@@ -53,43 +53,63 @@ def parse_date(date_str: str) -> Optional[date]:
 
 def ingest_stock_list(db: Session) -> list[dict]:
     """Step 1: Pull all stocks, filter to target markets, upsert into companies table."""
-    logger.info("Pulling stock list from FMP...")
+    logger.info("Pulling stock list from FMP stable API...")
     all_stocks = fmp_client.get_stock_list()
     logger.info(f"Got {len(all_stocks)} total stocks from FMP")
 
-    # If get_stock_list() returns empty, try stock screener endpoint as fallback
-    if not all_stocks:
-        logger.warning("Stock list endpoint returned 0 results, trying stock screener endpoint...")
-        all_stocks = fmp_client.get_stock_screener(market_cap_min=100000000)
-        logger.info(f"Stock screener returned {len(all_stocks)} stocks")
+    # Log a sample record so we can see the field names
+    if all_stocks and len(all_stocks) > 0:
+        sample = all_stocks[0]
+        logger.info(f"Sample stock record keys: {list(sample.keys())}")
+        logger.info(f"Sample stock record: {sample}")
 
     # Filter to target exchanges and non-empty tickers
+    # The stable API may use different field names, so check multiple possibilities
     target_exchanges = set(settings.TARGET_EXCHANGES)
     filtered = []
     for stock in all_stocks:
         ticker = stock.get("symbol", "")
-        exchange = stock.get("exchangeShortName", "")
+        # Try multiple possible field names for exchange
+        exchange = (
+            stock.get("exchangeShortName", "") or
+            stock.get("exchange", "") or
+            stock.get("stockExchange", "") or
+            ""
+        )
         stype = stock.get("type", "")
-        if not ticker or not exchange:
+        if not ticker:
             continue
-        if stype and stype != "stock":
-            continue
-        if exchange in target_exchanges:
+        # If we have exchange info, filter by it; if not, include all
+        if exchange and exchange in target_exchanges:
+            filtered.append(stock)
+        elif not exchange:
+            # No exchange info at all — include it (we'll get exchange from profile later)
             filtered.append(stock)
 
     logger.info(f"Filtered to {len(filtered)} stocks in target markets")
+
+    # If filtering was too aggressive and got 0, try including all stocks
+    if len(filtered) == 0 and len(all_stocks) > 0:
+        logger.warning("Exchange filter eliminated all stocks! Using unfiltered list (will rely on profile data).")
+        # Just take stocks that have valid symbols
+        filtered = [s for s in all_stocks if s.get("symbol")]
+        logger.info(f"Unfiltered: {len(filtered)} stocks with valid symbols")
+        # Cap at 5000 to avoid overwhelming the API
+        if len(filtered) > 5000:
+            filtered = filtered[:5000]
+            logger.info("Capped unfiltered list at 5000 stocks")
 
     # Log first few tickers for debugging
     if filtered:
         first_tickers = [s.get("symbol", "") for s in filtered[:5]]
         logger.info(f"First few filtered tickers: {first_tickers}")
     else:
-        logger.warning("No stocks passed the target exchange filter!")
+        logger.warning("No stocks passed any filter!")
 
     # Upsert into companies table
     for stock in filtered:
         ticker = stock["symbol"]
-        exchange_short = stock.get("exchangeShortName", "")
+        exchange_short = stock.get("exchangeShortName", "") or stock.get("exchange", "") or stock.get("stockExchange", "") or ""
         existing = db.query(Company).filter(
             Company.ticker == ticker,
             Company.exchange_short == exchange_short
