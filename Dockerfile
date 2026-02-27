@@ -25,8 +25,8 @@ COPY backend/ ./backend/
 # Copy built frontend from stage 1
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
-# Expose port
-EXPOSE 8000
+# Expose port (Railway sets PORT dynamically)
+EXPOSE ${PORT:-8000}
 
-# Run the FastAPI app
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the FastAPI app using Railway's PORT env var
+CMD uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}
