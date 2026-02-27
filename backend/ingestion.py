@@ -57,6 +57,12 @@ def ingest_stock_list(db: Session) -> list[dict]:
     all_stocks = fmp_client.get_stock_list()
     logger.info(f"Got {len(all_stocks)} total stocks from FMP")
 
+    # If get_stock_list() returns empty, try stock screener endpoint as fallback
+    if not all_stocks:
+        logger.warning("Stock list endpoint returned 0 results, trying stock screener endpoint...")
+        all_stocks = fmp_client.get_stock_screener(market_cap_min=100000000)
+        logger.info(f"Stock screener returned {len(all_stocks)} stocks")
+
     # Filter to target exchanges and non-empty tickers
     target_exchanges = set(settings.TARGET_EXCHANGES)
     filtered = []
@@ -72,6 +78,13 @@ def ingest_stock_list(db: Session) -> list[dict]:
             filtered.append(stock)
 
     logger.info(f"Filtered to {len(filtered)} stocks in target markets")
+
+    # Log first few tickers for debugging
+    if filtered:
+        first_tickers = [s.get("symbol", "") for s in filtered[:5]]
+        logger.info(f"First few filtered tickers: {first_tickers}")
+    else:
+        logger.warning("No stocks passed the target exchange filter!")
 
     # Upsert into companies table
     for stock in filtered:
@@ -404,7 +417,15 @@ def run_full_ingestion(batch_size: int = 50):
     try:
         # Step 1: Get stock list
         ingestion_progress["phase"] = "Pulling stock list from FMP..."
-        ingest_stock_list(db)
+        filtered_stocks = ingest_stock_list(db)
+
+        # Check if we got any companies
+        if not filtered_stocks or len(filtered_stocks) == 0:
+            error_msg = "Failed to ingest stock list - no stocks returned from FMP. Check API key and connection."
+            ingestion_progress["phase"] = "Failed"
+            ingestion_progress["last_error"] = error_msg
+            logger.error(error_msg)
+            return
 
         # Step 2: Pull data for each company
         companies = db.query(Company).filter(Company.is_active == True).all()
@@ -412,6 +433,13 @@ def run_full_ingestion(batch_size: int = 50):
         ingestion_progress["total"] = total
         ingestion_progress["phase"] = "Ingesting company data"
         logger.info(f"Starting data ingestion for {total} companies...")
+
+        if total == 0:
+            error_msg = "No active companies in database after stock list ingestion"
+            ingestion_progress["phase"] = "Failed"
+            ingestion_progress["last_error"] = error_msg
+            logger.error(error_msg)
+            return
 
         for i, company in enumerate(companies):
             try:

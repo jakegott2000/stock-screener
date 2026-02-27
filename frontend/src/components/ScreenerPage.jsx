@@ -5,14 +5,15 @@ import Watchlist from './Watchlist'
 import { runScreen, getFields, getStats, triggerIngestion, triggerQuoteUpdate, getWatchlistTickers, addToWatchlist, removeFromWatchlist, getIngestionProgress } from '../api'
 
 const COLORS = {
-  bg: '#0d1117',
-  card: '#161b22',
-  border: '#30363d',
+  bg: '#0a0e1a',
+  card: 'rgba(17, 24, 39, 0.5)',
+  border: 'rgba(6, 182, 212, 0.2)',
   text: '#e6edf3',
   secondary: '#8b949e',
-  accent: '#3b82f6',
-  green: '#3fb950',
-  red: '#f85149',
+  accent: '#06b6d4',
+  accentPurple: '#8b5cf6',
+  green: '#10b981',
+  red: '#ef4444',
 }
 
 const styles = {
@@ -20,7 +21,7 @@ const styles = {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '20px 24px',
-    backgroundColor: COLORS.bg,
+    backgroundColor: 'transparent',
     minHeight: '100vh',
   },
   topBar: {
@@ -34,6 +35,7 @@ const styles = {
   stats: {
     fontSize: '13px',
     color: COLORS.secondary,
+    fontWeight: '500',
   },
   adminBtns: {
     display: 'flex',
@@ -41,14 +43,16 @@ const styles = {
     flexWrap: 'wrap',
   },
   adminBtn: {
-    padding: '6px 14px',
-    backgroundColor: COLORS.card,
-    color: COLORS.secondary,
+    padding: '8px 16px',
+    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    color: COLORS.text,
     border: `1px solid ${COLORS.border}`,
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '12px',
-    transition: 'all 0.2s',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   },
   tabsContainer: {
     display: 'flex',
@@ -57,64 +61,71 @@ const styles = {
     borderBottom: `1px solid ${COLORS.border}`,
   },
   tab: {
-    padding: '12px 16px',
+    padding: '12px 20px',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
     fontSize: '14px',
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.secondary,
-    borderBottom: `2px solid transparent`,
-    transition: 'all 0.2s',
+    borderBottom: `3px solid transparent`,
+    transition: 'all 0.3s ease',
     position: 'relative',
   },
   tabActive: {
-    color: COLORS.text,
+    color: COLORS.accent,
     borderBottomColor: COLORS.accent,
   },
   tabBadge: {
     display: 'inline-block',
     marginLeft: '6px',
-    padding: '2px 6px',
-    backgroundColor: COLORS.accent,
-    color: COLORS.bg,
+    padding: '3px 8px',
+    background: `linear-gradient(135deg, ${COLORS.accent} 0%, #3b82f6 100%)`,
+    color: '#0a0e1a',
     borderRadius: '12px',
     fontSize: '11px',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   presetBar: {
     display: 'flex',
-    gap: '8px',
-    marginBottom: '16px',
+    gap: '10px',
+    marginBottom: '20px',
     flexWrap: 'wrap',
     alignItems: 'center',
   },
   presetLabel: {
     fontSize: '12px',
     color: COLORS.secondary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   preset: {
-    padding: '6px 14px',
-    backgroundColor: COLORS.card,
-    color: COLORS.secondary,
+    padding: '8px 16px',
+    backgroundColor: 'rgba(17, 24, 39, 0.5)',
+    color: COLORS.text,
     border: `1px solid ${COLORS.border}`,
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '12px',
-    transition: 'all 0.2s',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   },
   presetHover: {
     borderColor: COLORS.accent,
-    color: COLORS.text,
+    color: COLORS.accent,
+    backgroundColor: `rgba(6, 182, 212, 0.1)`,
+    boxShadow: `0 0 16px rgba(6, 182, 212, 0.2)`,
   },
   message: {
     padding: '12px 16px',
-    backgroundColor: COLORS.green + '1a',
+    backgroundColor: `rgba(16, 185, 129, 0.1)`,
     color: COLORS.green,
     borderRadius: '8px',
     fontSize: '13px',
     marginBottom: '12px',
-    border: `1px solid ${COLORS.green}33`,
+    border: `1px solid rgba(16, 185, 129, 0.3)`,
   },
 }
 
@@ -304,36 +315,39 @@ export default function ScreenerPage() {
 
       {progress && progress.running && (
         <div style={{
-          padding: '16px 20px',
-          backgroundColor: '#161b22',
-          border: '1px solid #30363d',
-          borderRadius: '10px',
-          marginBottom: '16px',
+          padding: '20px 24px',
+          backgroundColor: 'rgba(17, 24, 39, 0.6)',
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '12px',
+          marginBottom: '20px',
+          backdropFilter: 'blur(10px)',
+          boxShadow: `0 0 20px rgba(6, 182, 212, 0.15)`,
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-            <span style={{ color: '#e6edf3', fontWeight: '600' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px' }}>
+            <span style={{ color: '#e6edf3', fontWeight: '700' }}>
               {progress.phase === 'Pulling stock list from FMP...' ? 'Loading stock list...' : `Syncing: ${progress.current_ticker}`}
             </span>
-            <span style={{ color: '#8b949e' }}>
+            <span style={{ color: COLORS.secondary }}>
               {progress.total > 0 ? `${progress.current} / ${progress.total} companies` : 'Starting...'}
               {progress.errors > 0 && ` (${progress.errors} errors)`}
             </span>
           </div>
           <div style={{
-            width: '100%', height: '8px', backgroundColor: '#0d1117',
-            borderRadius: '4px', overflow: 'hidden',
+            width: '100%', height: '10px', backgroundColor: 'rgba(10, 14, 26, 0.6)',
+            borderRadius: '6px', overflow: 'hidden', border: `1px solid ${COLORS.border}`,
           }}>
             <div style={{
               width: progress.total > 0 ? `${(progress.current / progress.total * 100).toFixed(1)}%` : '5%',
               height: '100%',
-              background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-              borderRadius: '4px',
+              background: `linear-gradient(90deg, ${COLORS.accent}, #3b82f6, ${COLORS.accentPurple})`,
+              borderRadius: '6px',
               transition: 'width 0.5s ease',
-              boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
+              boxShadow: `0 0 20px ${COLORS.accent}, 0 0 10px rgba(59, 130, 246, 0.6)`,
+              animation: 'pulse-glow 2s ease-in-out infinite',
             }} />
           </div>
           {progress.total > 0 && (
-            <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '6px' }}>
+            <div style={{ fontSize: '11px', color: COLORS.secondary, marginTop: '8px' }}>
               {((progress.current / progress.total) * 100).toFixed(1)}% complete — this runs on the server, safe to close your browser
             </div>
           )}

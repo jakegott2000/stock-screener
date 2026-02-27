@@ -16,6 +16,7 @@ from backend.database import get_db, init_db, SessionLocal
 from backend.auth import verify_password, create_access_token, get_current_user
 from backend.screener import run_screen, get_field_definitions
 from backend.ingestion import run_full_ingestion, run_incremental_update, get_progress
+from backend.fmp_client import fmp_client
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -151,6 +152,23 @@ def get_stats(user: str = Depends(get_current_user), db=Depends(get_db)):
 def get_ingestion_progress(user: str = Depends(get_current_user)):
     """Get current ingestion progress."""
     return get_progress()
+
+
+@app.get("/api/admin/test-fmp")
+def test_fmp_connection(user: str = Depends(get_current_user)):
+    """Test FMP API connection."""
+    return fmp_client.test_connection()
+
+
+@app.get("/api/admin/errors")
+def get_ingestion_errors(user: str = Depends(get_current_user)):
+    """Get last ingestion error if any."""
+    progress = get_progress()
+    return {
+        "last_error": progress.get("last_error", ""),
+        "error_count": progress.get("errors", 0),
+        "phase": progress.get("phase", ""),
+    }
 
 
 # ===== Watchlist Endpoints =====

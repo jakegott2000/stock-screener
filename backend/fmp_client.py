@@ -21,12 +21,20 @@ class FMPClient:
         return f"{self.base_url}{path}{separator}apikey={self.api_key}"
 
     def _get(self, path: str) -> Optional[list | dict]:
+        url = self._url(path)
         try:
-            resp = self.client.get(self._url(path))
-            resp.raise_for_status()
-            return resp.json()
+            resp = self.client.get(url)
+            if resp.status_code != 200:
+                logger.error(f"FMP API returned {resp.status_code} for {path}: {resp.text[:500]}")
+                return None
+            data = resp.json()
+            # FMP sometimes returns error messages as JSON
+            if isinstance(data, dict) and "Error Message" in data:
+                logger.error(f"FMP API error for {path}: {data['Error Message']}")
+                return None
+            return data
         except httpx.HTTPError as e:
-            logger.error(f"FMP API error for {path}: {e}")
+            logger.error(f"FMP HTTP error for {path}: {e}")
             return None
         except Exception as e:
             logger.error(f"Unexpected error for {path}: {e}")
@@ -98,6 +106,34 @@ class FMPClient:
         query = "&".join(params)
         data = self._get(f"/v3/stock-screener?{query}")
         return data if data else []
+
+    def test_connection(self) -> dict:
+        """Test the API connection by fetching a single quote (AAPL)."""
+        logger.info("Testing FMP API connection...")
+        try:
+            result = self.get_quote("AAPL")
+            if result:
+                logger.info("FMP API connection test successful")
+                return {
+                    "status": "success",
+                    "message": "Successfully connected to FMP API",
+                    "ticker_tested": "AAPL",
+                    "quote": result
+                }
+            else:
+                logger.error("FMP API connection test failed - no data returned")
+                return {
+                    "status": "failed",
+                    "message": "FMP API returned no data for AAPL quote",
+                    "ticker_tested": "AAPL"
+                }
+        except Exception as e:
+            logger.error(f"FMP API connection test error: {e}")
+            return {
+                "status": "error",
+                "message": f"API connection test failed: {str(e)}",
+                "error_details": str(e)
+            }
 
     def close(self):
         self.client.close()
