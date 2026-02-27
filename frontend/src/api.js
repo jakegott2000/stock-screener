@@ -43,4 +43,5 @@ export async function addToWatchlist(ticker, notes = '') {
 export async function removeFromWatchlist(ticker) {
   return apiFetch(`/watchlist/${ticker}`, { method: 'DELETE' });
 }
+export async function getIngestionProgress() { return apiFetch('/admin/progress'); }
 export function logout() { clearToken(); window.location.reload(); }

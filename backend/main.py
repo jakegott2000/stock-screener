@@ -15,7 +15,7 @@ from backend.config import settings
 from backend.database import get_db, init_db, SessionLocal
 from backend.auth import verify_password, create_access_token, get_current_user
 from backend.screener import run_screen, get_field_definitions
-from backend.ingestion import run_full_ingestion, run_incremental_update
+from backend.ingestion import run_full_ingestion, run_incremental_update, get_progress
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -145,6 +145,12 @@ def get_stats(user: str = Depends(get_current_user), db=Depends(get_db)):
         "total_companies": total_companies,
         "screened_companies": screened_companies,
     }
+
+
+@app.get("/api/admin/progress")
+def get_ingestion_progress(user: str = Depends(get_current_user)):
+    """Get current ingestion progress."""
+    return get_progress()
 
 
 # ===== Watchlist Endpoints =====

@@ -25,6 +25,22 @@ from backend.fmp_client import fmp_client
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
+# Global progress tracker
+ingestion_progress = {
+    "running": False,
+    "phase": "",
+    "current": 0,
+    "total": 0,
+    "current_ticker": "",
+    "errors": 0,
+    "started_at": None,
+    "last_error": "",
+}
+
+
+def get_progress():
+    return dict(ingestion_progress)
+
 
 def parse_date(date_str: str) -> Optional[date]:
     if not date_str:
@@ -372,18 +388,35 @@ def run_full_ingestion(batch_size: int = 50):
     This pulls data for all companies and computes screening metrics.
     For initial load, this will take a while due to API rate limits.
     """
+    global ingestion_progress
+
+    if ingestion_progress["running"]:
+        logger.warning("Ingestion already running, skipping.")
+        return
+
+    ingestion_progress.update({
+        "running": True, "phase": "Loading stock list", "current": 0,
+        "total": 0, "current_ticker": "", "errors": 0,
+        "started_at": datetime.now(timezone.utc).isoformat(), "last_error": "",
+    })
+
     db = SessionLocal()
     try:
         # Step 1: Get stock list
+        ingestion_progress["phase"] = "Pulling stock list from FMP..."
         ingest_stock_list(db)
 
         # Step 2: Pull data for each company
         companies = db.query(Company).filter(Company.is_active == True).all()
         total = len(companies)
+        ingestion_progress["total"] = total
+        ingestion_progress["phase"] = "Ingesting company data"
         logger.info(f"Starting data ingestion for {total} companies...")
 
         for i, company in enumerate(companies):
             try:
+                ingestion_progress["current"] = i + 1
+                ingestion_progress["current_ticker"] = company.ticker
                 logger.info(f"[{i+1}/{total}] Ingesting {company.ticker}...")
                 ingest_company_data(db, company)
                 compute_revenue_growth(db, company)
@@ -393,13 +426,22 @@ def run_full_ingestion(batch_size: int = 50):
                     logger.info(f"Progress: {i+1}/{total} companies processed")
 
             except Exception as e:
+                ingestion_progress["errors"] += 1
+                ingestion_progress["last_error"] = f"{company.ticker}: {str(e)[:100]}"
                 logger.error(f"Error ingesting {company.ticker}: {e}")
                 db.rollback()
                 continue
 
+        ingestion_progress["phase"] = "Complete"
         logger.info("Full ingestion complete!")
 
+    except Exception as e:
+        ingestion_progress["phase"] = f"Failed: {str(e)[:200]}"
+        ingestion_progress["last_error"] = str(e)[:200]
+        logger.error(f"Ingestion failed: {e}")
+
     finally:
+        ingestion_progress["running"] = False
         db.close()
 
 

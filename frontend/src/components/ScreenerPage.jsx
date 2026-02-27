@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import FilterBuilder from './FilterBuilder'
 import ResultsTable from './ResultsTable'
 import Watchlist from './Watchlist'
-import { runScreen, getFields, getStats, triggerIngestion, triggerQuoteUpdate, getWatchlistTickers, addToWatchlist, removeFromWatchlist } from '../api'
+import { runScreen, getFields, getStats, triggerIngestion, triggerQuoteUpdate, getWatchlistTickers, addToWatchlist, removeFromWatchlist, getIngestionProgress } from '../api'
 
 const COLORS = {
   bg: '#0d1117',
@@ -162,11 +162,23 @@ export default function ScreenerPage() {
   const [message, setMessage] = useState('')
   const [watchedTickers, setWatchedTickers] = useState(new Set())
   const [watchlistCount, setWatchlistCount] = useState(0)
+  const [progress, setProgress] = useState(null)
 
   useEffect(() => {
     getFields().then(setFields).catch(() => {})
     getStats().then(setStats).catch(() => {})
     fetchWatchlistTickers()
+    // Poll progress every 3 seconds
+    const interval = setInterval(async () => {
+      try {
+        const p = await getIngestionProgress()
+        setProgress(p)
+        if (p && !p.running && p.phase === 'Complete') {
+          getStats().then(setStats).catch(() => {})
+        }
+      } catch {}
+    }, 3000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchWatchlistTickers = async () => {
@@ -289,6 +301,44 @@ export default function ScreenerPage() {
       </div>
 
       {message && <div style={styles.message}>{message}</div>}
+
+      {progress && progress.running && (
+        <div style={{
+          padding: '16px 20px',
+          backgroundColor: '#161b22',
+          border: '1px solid #30363d',
+          borderRadius: '10px',
+          marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+            <span style={{ color: '#e6edf3', fontWeight: '600' }}>
+              {progress.phase === 'Pulling stock list from FMP...' ? 'Loading stock list...' : `Syncing: ${progress.current_ticker}`}
+            </span>
+            <span style={{ color: '#8b949e' }}>
+              {progress.total > 0 ? `${progress.current} / ${progress.total} companies` : 'Starting...'}
+              {progress.errors > 0 && ` (${progress.errors} errors)`}
+            </span>
+          </div>
+          <div style={{
+            width: '100%', height: '8px', backgroundColor: '#0d1117',
+            borderRadius: '4px', overflow: 'hidden',
+          }}>
+            <div style={{
+              width: progress.total > 0 ? `${(progress.current / progress.total * 100).toFixed(1)}%` : '5%',
+              height: '100%',
+              background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+              borderRadius: '4px',
+              transition: 'width 0.5s ease',
+              boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
+            }} />
+          </div>
+          {progress.total > 0 && (
+            <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '6px' }}>
+              {((progress.current / progress.total) * 100).toFixed(1)}% complete — this runs on the server, safe to close your browser
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === 'screener' && (
         <>
