@@ -1,128 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { getWatchlist, removeFromWatchlist } from '../api'
 
-const COLORS = {
-  bg: '#0a0e1a',
-  card: 'rgba(17, 24, 39, 0.5)',
-  border: 'rgba(6, 182, 212, 0.2)',
-  text: '#e6edf3',
-  secondary: '#8b949e',
-  accent: '#06b6d4',
-  accentPurple: '#8b5cf6',
-  green: '#10b981',
-  red: '#ef4444',
-}
-
-const styles = {
-  container: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '16px',
-    padding: '20px',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-      gap: '12px',
-      padding: '12px',
-    },
-    '@media (max-width: 480px)': {
-      gridTemplateColumns: '1fr',
-      gap: '12px',
-      padding: '12px',
-    },
-  },
-  card: {
-    backgroundColor: COLORS.card,
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: '12px',
-    padding: '20px',
-    position: 'relative',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 4px 16px rgba(6, 182, 212, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)',
-  },
-  cardHover: {
-    borderColor: COLORS.accent,
-    boxShadow: `0 8px 24px rgba(6, 182, 212, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05)`,
-    transform: 'translateY(-4px)',
-  },
-  ticker: {
-    fontSize: '24px',
-    fontWeight: '800',
-    background: `linear-gradient(135deg, ${COLORS.accent} 0%, #3b82f6 100%)`,
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    marginBottom: '6px',
-  },
-  name: {
-    fontSize: '13px',
-    color: COLORS.secondary,
-    marginBottom: '14px',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    fontWeight: '500',
-  },
-  stat: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '12px',
-    color: COLORS.text,
-    marginBottom: '10px',
-  },
-  statLabel: {
-    color: COLORS.secondary,
-    fontWeight: '500',
-  },
-  statValue: {
-    fontWeight: '700',
-  },
-  removeBtn: {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    background: 'none',
-    border: 'none',
-    fontSize: '18px',
-    color: COLORS.secondary,
-    cursor: 'pointer',
-    padding: '0',
-    width: '28px',
-    height: '28px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.3s ease',
-  },
-  removeBtnHover: {
-    color: COLORS.red,
-    boxShadow: `0 0 12px ${COLORS.red}`,
-  },
-  empty: {
-    gridColumn: '1 / -1',
-    padding: '60px 20px',
-    textAlign: 'center',
-    color: COLORS.secondary,
-    fontSize: '15px',
-    backgroundColor: COLORS.card,
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: '12px',
-    marginTop: '20px',
-    backdropFilter: 'blur(10px)',
-  },
-  loading: {
-    gridColumn: '1 / -1',
-    textAlign: 'center',
-    padding: '40px',
-    color: COLORS.secondary,
-    fontSize: '14px',
-  },
-}
-
 function formatValue(value, format) {
   if (value === null || value === undefined) return '—'
-
   switch (format) {
     case 'currency_compact': {
       const abs = Math.abs(value)
@@ -135,8 +15,7 @@ function formatValue(value, format) {
       return `${(value * 100).toFixed(1)}%`
     case 'percent_change': {
       const pct = (value * 100).toFixed(1)
-      const sign = value >= 0 ? '+' : ''
-      return `${sign}${pct}%`
+      return `${value >= 0 ? '+' : ''}${pct}%`
     }
     case 'decimal2':
       return value.toFixed(2)
@@ -144,6 +23,94 @@ function formatValue(value, format) {
       if (typeof value === 'number') return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
       return String(value)
   }
+}
+
+const styles = {
+  container: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '12px',
+  },
+  card: {
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    borderRadius: '12px',
+    padding: '20px',
+    position: 'relative',
+    transition: 'all 0.15s ease',
+  },
+  cardHover: {
+    borderColor: '#3f3f46',
+  },
+  ticker: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#fafafa',
+    marginBottom: '2px',
+  },
+  name: {
+    fontSize: '12px',
+    color: '#52525b',
+    marginBottom: '16px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  divider: {
+    height: '1px',
+    backgroundColor: '#27272a',
+    marginBottom: '14px',
+  },
+  stat: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '12px',
+    marginBottom: '8px',
+  },
+  statLabel: {
+    color: '#52525b',
+    fontWeight: '500',
+  },
+  statValue: {
+    fontWeight: '600',
+    color: '#d4d4d8',
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: '14px',
+    right: '14px',
+    background: 'none',
+    border: 'none',
+    fontSize: '14px',
+    color: '#3f3f46',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    transition: 'all 0.15s ease',
+    lineHeight: '1',
+  },
+  removeBtnHover: {
+    color: '#f87171',
+    backgroundColor: 'rgba(248, 113, 113, 0.08)',
+  },
+  empty: {
+    gridColumn: '1 / -1',
+    padding: '60px 20px',
+    textAlign: 'center',
+    color: '#3f3f46',
+    fontSize: '14px',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    borderRadius: '12px',
+  },
+  loading: {
+    gridColumn: '1 / -1',
+    textAlign: 'center',
+    padding: '40px',
+    color: '#52525b',
+    fontSize: '13px',
+  },
 }
 
 export default function Watchlist() {
@@ -223,32 +190,37 @@ export default function Watchlist() {
 
           <div style={styles.ticker}>{stock.ticker}</div>
           <div style={styles.name}>{stock.name}</div>
+          <div style={styles.divider} />
 
           <div style={styles.stat}>
             <span style={styles.statLabel}>Market Cap</span>
-            <span style={styles.statValue}>{formatValue(stock.market_cap, 'currency_compact')}</span>
+            <span style={styles.statValue}>
+              {formatValue(stock.market_cap, 'currency_compact')}
+            </span>
           </div>
 
           <div style={styles.stat}>
-            <span style={styles.statLabel}>P/E Ratio</span>
-            <span style={styles.statValue}>{formatValue(stock.forward_pe, 'decimal2')}</span>
+            <span style={styles.statLabel}>Fwd P/E</span>
+            <span style={styles.statValue}>
+              {formatValue(stock.forward_pe, 'decimal2')}
+            </span>
           </div>
 
           <div style={styles.stat}>
             <span style={styles.statLabel}>Gross Margin</span>
             <span style={{
               ...styles.statValue,
-              color: stock.gross_margin > 0 ? COLORS.green : COLORS.red,
+              ...(stock.gross_margin > 0 ? { color: '#4ade80' } : { color: '#f87171' }),
             }}>
               {formatValue(stock.gross_margin, 'percent')}
             </span>
           </div>
 
           <div style={styles.stat}>
-            <span style={styles.statLabel}>Revenue Growth</span>
+            <span style={styles.statLabel}>Rev Growth</span>
             <span style={{
               ...styles.statValue,
-              color: stock.revenue_growth_yoy > 0 ? COLORS.green : COLORS.red,
+              ...(stock.revenue_growth_yoy > 0 ? { color: '#4ade80' } : stock.revenue_growth_yoy < 0 ? { color: '#f87171' } : {}),
             }}>
               {formatValue(stock.revenue_growth_yoy, 'percent')}
             </span>

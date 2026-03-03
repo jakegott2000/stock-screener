@@ -7,109 +7,86 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#0a0e1a',
-    background: 'linear-gradient(135deg, #0a0e1a 0%, #111827 25%, #1f2937 50%, #111827 75%, #0a0e1a 100%)',
-    backgroundSize: '400% 400%',
-    animation: 'gradient-shift 15s ease infinite',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    backgroundColor: '#09090b',
     padding: '16px',
-    boxSizing: 'border-box',
-    position: 'relative',
-    overflow: 'hidden',
   },
   card: {
-    backgroundColor: 'rgba(17, 24, 39, 0.7)',
-    border: '1px solid rgba(6, 182, 212, 0.3)',
-    borderRadius: '16px',
-    padding: '48px 40px',
     width: '100%',
-    maxWidth: '400px',
-    textAlign: 'center',
-    backdropFilter: 'blur(20px)',
-    boxShadow: '0 20px 60px rgba(6, 182, 212, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
-    position: 'relative',
-    zIndex: 10,
+    maxWidth: '380px',
+    animation: 'fadeIn 0.4s ease-out',
   },
-  brandContainer: {
-    marginBottom: '28px',
+  logoSection: {
+    textAlign: 'center',
+    marginBottom: '40px',
   },
   logo: {
-    fontSize: 'clamp(28px, 6vw, 42px)',
+    fontSize: '32px',
     fontWeight: '800',
-    background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%)',
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    color: '#fafafa',
     letterSpacing: '-1px',
-    marginBottom: '10px',
-    textShadow: '0 0 30px rgba(6, 182, 212, 0.2)',
+    marginBottom: '8px',
+  },
+  logoAccent: {
+    color: '#818cf8',
   },
   subtitle: {
-    fontSize: 'clamp(12px, 3vw, 14px)',
-    color: '#94a3b8',
-    fontWeight: '500',
-    letterSpacing: '0.5px',
-  },
-  divider: {
-    height: '2px',
-    background: 'linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.3), transparent)',
-    margin: '28px 0',
-  },
-  formTitle: {
     fontSize: '14px',
-    color: '#cbd5e1',
-    fontWeight: '700',
-    marginBottom: '20px',
-    letterSpacing: '0.8px',
-    textTransform: 'uppercase',
-    color: '#06b6d4',
+    color: '#52525b',
+    fontWeight: '400',
+  },
+  formCard: {
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    borderRadius: '12px',
+    padding: '32px 28px',
+  },
+  label: {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#a1a1aa',
+    marginBottom: '8px',
   },
   input: {
     width: '100%',
-    padding: '12px 16px',
-    backgroundColor: 'rgba(10, 14, 26, 0.6)',
-    border: '1px solid rgba(6, 182, 212, 0.2)',
-    borderRadius: '10px',
-    color: '#e2e8f0',
-    fontSize: '15px',
+    padding: '10px 14px',
+    backgroundColor: '#09090b',
+    border: '1px solid #27272a',
+    borderRadius: '8px',
+    color: '#fafafa',
+    fontSize: '14px',
     outline: 'none',
-    marginBottom: '16px',
+    transition: 'all 0.15s ease',
     boxSizing: 'border-box',
-    transition: 'all 0.3s ease',
-    backdropFilter: 'blur(5px)',
   },
   inputFocus: {
-    backgroundColor: 'rgba(10, 14, 26, 0.8)',
-    borderColor: 'rgba(6, 182, 212, 0.6)',
-    boxShadow: '0 0 0 3px rgba(6, 182, 212, 0.2), 0 0 20px rgba(6, 182, 212, 0.1)',
+    borderColor: '#818cf8',
+    boxShadow: '0 0 0 3px rgba(129, 140, 248, 0.1)',
   },
   button: {
     width: '100%',
-    padding: '12px 16px',
-    background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%)',
-    color: '#ffffff',
+    padding: '10px 16px',
+    backgroundColor: '#818cf8',
+    color: '#fafafa',
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '15px',
-    fontWeight: '700',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    marginTop: '8px',
-    letterSpacing: '0.5px',
-    boxShadow: '0 4px 16px rgba(6, 182, 212, 0.3)',
+    transition: 'all 0.15s ease',
+    marginTop: '20px',
   },
   buttonHover: {
-    boxShadow: '0 8px 24px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)',
-    transform: 'translateY(-2px)',
+    backgroundColor: '#6366f1',
   },
   error: {
-    color: '#fca5a5',
+    color: '#f87171',
     fontSize: '13px',
     marginBottom: '16px',
     padding: '10px 12px',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(248, 113, 113, 0.08)',
     borderRadius: '8px',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    border: '1px solid rgba(248, 113, 113, 0.15)',
   },
 }
 
@@ -141,41 +118,45 @@ export default function Login({ onLogin }) {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={styles.brandContainer}>
-          <div style={styles.logo}>JacobIQ</div>
-          <div style={styles.subtitle}>Screener Draft 1.0</div>
+        <div style={styles.logoSection}>
+          <div style={styles.logo}>
+            Jacob<span style={styles.logoAccent}>IQ</span>
+          </div>
+          <div style={styles.subtitle}>Global stock screener</div>
         </div>
-        <div style={styles.divider}></div>
-        <div style={styles.formTitle}>Access Terminal</div>
-        <form onSubmit={handleSubmit}>
-          {error && <div style={styles.error}>{error}</div>}
-          <input
-            style={{
-              ...styles.input,
-              ...(inputFocused ? styles.inputFocus : {}),
-            }}
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            autoFocus
-          />
-          <button
-            style={{
-              ...styles.button,
-              ...(buttonHovered && !loading ? styles.buttonHover : {}),
-              opacity: loading ? 0.75 : 1,
-            }}
-            type="submit"
-            disabled={loading}
-            onMouseEnter={() => setButtonHovered(true)}
-            onMouseLeave={() => setButtonHovered(false)}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+
+        <div style={styles.formCard}>
+          <form onSubmit={handleSubmit}>
+            {error && <div style={styles.error}>{error}</div>}
+            <label style={styles.label}>Password</label>
+            <input
+              style={{
+                ...styles.input,
+                ...(inputFocused ? styles.inputFocus : {}),
+              }}
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              autoFocus
+            />
+            <button
+              style={{
+                ...styles.button,
+                ...(buttonHovered && !loading ? styles.buttonHover : {}),
+                opacity: loading ? 0.7 : 1,
+              }}
+              type="submit"
+              disabled={loading}
+              onMouseEnter={() => setButtonHovered(true)}
+              onMouseLeave={() => setButtonHovered(false)}
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

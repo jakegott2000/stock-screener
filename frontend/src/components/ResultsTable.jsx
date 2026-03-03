@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 
 function formatValue(value, format) {
   if (value === null || value === undefined) return '—'
-
   switch (format) {
     case 'currency_compact': {
       const abs = Math.abs(value)
@@ -15,8 +14,7 @@ function formatValue(value, format) {
       return `${(value * 100).toFixed(1)}%`
     case 'percent_change': {
       const pct = (value * 100).toFixed(1)
-      const sign = value >= 0 ? '+' : ''
-      return `${sign}${pct}%`
+      return `${value >= 0 ? '+' : ''}${pct}%`
     }
     case 'decimal2':
       return value.toFixed(2)
@@ -26,45 +24,30 @@ function formatValue(value, format) {
   }
 }
 
-// Default columns to show (excluding 'watch' which is handled separately)
 const DEFAULT_COLUMNS = [
   'ticker', 'name', 'sector', 'market_cap', 'forward_pe', 'ev_to_ebitda',
   'gross_margin', 'operating_margin', 'roic', 'revenue_growth_yoy',
   'forward_pe_vs_5yr_pct', 'gross_margin_vs_5yr_pct',
 ]
 
-const COLORS = {
-  bg: '#0a0e1a',
-  card: 'rgba(17, 24, 39, 0.5)',
-  border: 'rgba(6, 182, 212, 0.2)',
-  text: '#e6edf3',
-  secondary: '#8b949e',
-  accent: '#06b6d4',
-  accentPurple: '#8b5cf6',
-  green: '#10b981',
-  red: '#ef4444',
-}
-
 const styles = {
   container: {
-    backgroundColor: COLORS.card,
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: '14px',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    borderRadius: '12px',
     overflow: 'hidden',
-    boxShadow: '0 8px 32px rgba(6, 182, 212, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px 24px',
-    borderBottom: `1px solid ${COLORS.border}`,
+    padding: '14px 20px',
+    borderBottom: '1px solid #27272a',
   },
   count: {
-    fontSize: '14px',
-    color: COLORS.secondary,
-    fontWeight: '600',
+    fontSize: '13px',
+    color: '#52525b',
+    fontWeight: '500',
   },
   tableWrap: {
     overflowX: 'auto',
@@ -75,83 +58,89 @@ const styles = {
     fontSize: '13px',
   },
   th: {
-    padding: '12px 16px',
+    padding: '10px 16px',
     textAlign: 'left',
-    color: COLORS.secondary,
-    fontWeight: '700',
+    color: '#52525b',
+    fontWeight: '600',
     fontSize: '11px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    borderBottom: `1px solid ${COLORS.border}`,
+    borderBottom: '1px solid #27272a',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     userSelect: 'none',
-    transition: 'color 0.2s ease',
-    backgroundColor: 'rgba(10, 14, 26, 0.3)',
+    transition: 'color 0.15s ease',
+  },
+  thHover: {
+    color: '#a1a1aa',
   },
   td: {
-    padding: '12px 16px',
-    borderBottom: `1px solid rgba(6, 182, 212, 0.1)`,
+    padding: '10px 16px',
+    borderBottom: '1px solid rgba(39, 39, 42, 0.5)',
     whiteSpace: 'nowrap',
-    color: COLORS.text,
+    color: '#d4d4d8',
   },
   trHover: {
-    backgroundColor: 'rgba(6, 182, 212, 0.08)',
+    backgroundColor: 'rgba(39, 39, 42, 0.3)',
   },
   watchBtn: {
     background: 'none',
     border: 'none',
-    fontSize: '16px',
+    fontSize: '14px',
     cursor: 'pointer',
-    padding: '2px 6px',
-    color: COLORS.secondary,
-    transition: 'all 0.3s ease',
+    padding: '2px 4px',
+    color: '#3f3f46',
+    transition: 'all 0.15s ease',
     lineHeight: '1',
   },
   watchBtnActive: {
-    color: COLORS.accent,
-    textShadow: `0 0 8px ${COLORS.accent}`,
+    color: '#818cf8',
   },
   ticker: {
-    fontWeight: '800',
-    background: `linear-gradient(135deg, ${COLORS.accent} 0%, #3b82f6 100%)`,
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    fontWeight: '600',
+    color: '#fafafa',
+  },
+  name: {
+    color: '#71717a',
+    maxWidth: '180px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   positive: {
-    color: COLORS.green,
-    fontWeight: '600',
+    color: '#4ade80',
   },
   negative: {
-    color: COLORS.red,
-    fontWeight: '600',
+    color: '#f87171',
   },
   pagination: {
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: '8px',
-    padding: '16px',
-    borderTop: `1px solid ${COLORS.border}`,
-    flexWrap: 'wrap',
+    padding: '14px',
+    borderTop: '1px solid #27272a',
   },
   pageBtn: {
-    padding: '8px 16px',
-    backgroundColor: 'rgba(10, 14, 26, 0.5)',
-    color: COLORS.secondary,
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: '8px',
+    padding: '6px 14px',
+    backgroundColor: 'transparent',
+    color: '#71717a',
+    border: '1px solid #27272a',
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: '500',
-    transition: 'all 0.3s ease',
-    backdropFilter: 'blur(5px)',
+    transition: 'all 0.15s ease',
+  },
+  pageInfo: {
+    color: '#52525b',
+    fontSize: '12px',
+    fontWeight: '500',
   },
   empty: {
     padding: '60px 20px',
     textAlign: 'center',
-    color: COLORS.secondary,
-    fontSize: '15px',
+    color: '#3f3f46',
+    fontSize: '14px',
   },
 }
 
@@ -166,12 +155,13 @@ export default function ResultsTable({
   onToggleWatch = () => {},
 }) {
   const [hoveredRow, setHoveredRow] = useState(null)
+  const [hoveredTh, setHoveredTh] = useState(null)
 
   if (!data) {
     return (
       <div style={styles.container}>
         <div style={styles.empty}>
-          Configure your filters above and click "Run Screen" to find stocks.
+          Set your filters and click "Run Screen" to find stocks.
         </div>
       </div>
     )
@@ -183,7 +173,7 @@ export default function ResultsTable({
     return (
       <div style={styles.container}>
         <div style={styles.empty}>
-          No companies matched your screen. Try adjusting your filters.
+          No companies matched your filters. Try adjusting your criteria.
         </div>
       </div>
     )
@@ -195,7 +185,7 @@ export default function ResultsTable({
 
   const getColor = (value, format) => {
     if (typeof value !== 'number') return {}
-    if (format === 'percent_change' || format === 'percent') {
+    if (format === 'percent_change') {
       if (value > 0) return styles.positive
       if (value < 0) return styles.negative
     }
@@ -205,22 +195,34 @@ export default function ResultsTable({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div style={styles.count}>{total.toLocaleString()} companies found</div>
+        <div style={styles.count}>{total.toLocaleString()} results</div>
       </div>
 
       <div style={styles.tableWrap}>
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>★</th>
+              <th style={{ ...styles.th, width: '36px', textAlign: 'center', cursor: 'default' }}>
+                <span style={{ fontSize: '12px', color: '#3f3f46' }}>★</span>
+              </th>
               {columns.map(col => (
                 <th
                   key={col}
-                  style={styles.th}
+                  style={{
+                    ...styles.th,
+                    ...(hoveredTh === col ? styles.thHover : {}),
+                    ...(sortBy === col ? { color: '#a1a1aa' } : {}),
+                  }}
                   onClick={() => onSort(col)}
+                  onMouseEnter={() => setHoveredTh(col)}
+                  onMouseLeave={() => setHoveredTh(null)}
                 >
                   {fields[col]?.label || col}
-                  {sortBy === col && (sortDir === 'desc' ? ' ▼' : ' ▲')}
+                  {sortBy === col && (
+                    <span style={{ marginLeft: '4px', fontSize: '10px' }}>
+                      {sortDir === 'desc' ? '↓' : '↑'}
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -257,6 +259,7 @@ export default function ResultsTable({
                         style={{
                           ...styles.td,
                           ...(col === 'ticker' ? styles.ticker : {}),
+                          ...(col === 'name' ? styles.name : {}),
                           ...colorStyle,
                         }}
                       >
@@ -274,17 +277,17 @@ export default function ResultsTable({
       {totalPages > 1 && (
         <div style={styles.pagination}>
           <button
-            style={{ ...styles.pageBtn, opacity: currentPage <= 1 ? 0.4 : 1 }}
+            style={{ ...styles.pageBtn, opacity: currentPage <= 1 ? 0.3 : 1 }}
             onClick={() => onPageChange(offset - limit)}
             disabled={currentPage <= 1}
           >
             Previous
           </button>
-          <span style={{ color: COLORS.secondary, fontSize: '13px', lineHeight: '32px' }}>
-            Page {currentPage} of {totalPages}
+          <span style={styles.pageInfo}>
+            {currentPage} / {totalPages}
           </span>
           <button
-            style={{ ...styles.pageBtn, opacity: currentPage >= totalPages ? 0.4 : 1 }}
+            style={{ ...styles.pageBtn, opacity: currentPage >= totalPages ? 0.3 : 1 }}
             onClick={() => onPageChange(offset + limit)}
             disabled={currentPage >= totalPages}
           >

@@ -16,7 +16,6 @@ from backend.database import get_db, init_db, SessionLocal
 from backend.auth import verify_password, create_access_token, get_current_user
 from backend.screener import run_screen, get_field_definitions
 from backend.ingestion import run_full_ingestion, run_incremental_update, get_progress
-from backend.fmp_client import fmp_client
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -154,21 +153,47 @@ def get_ingestion_progress(user: str = Depends(get_current_user)):
     return get_progress()
 
 
-@app.get("/api/admin/test-fmp")
-def test_fmp_connection(user: str = Depends(get_current_user)):
-    """Test FMP API connection."""
-    return fmp_client.test_connection()
+@app.get("/api/admin/data-quality")
+def get_data_quality(user: str = Depends(get_current_user), db=Depends(get_db)):
+    """Check how many screener_data rows have non-null values for each key field.
+    Helps diagnose which metrics are actually populated."""
+    from backend.models import ScreenerData
+    from sqlalchemy import func
 
+    total = db.query(func.count(ScreenerData.id)).scalar()
+    if total == 0:
+        return {"total": 0, "fields": {}}
 
-@app.get("/api/admin/errors")
-def get_ingestion_errors(user: str = Depends(get_current_user)):
-    """Get last ingestion error if any."""
-    progress = get_progress()
-    return {
-        "last_error": progress.get("last_error", ""),
-        "error_count": progress.get("errors", 0),
-        "phase": progress.get("phase", ""),
-    }
+    fields_to_check = [
+        "market_cap", "enterprise_value", "pe_ratio", "forward_pe",
+        "price_to_sales", "price_to_book", "ev_to_ebitda", "ev_to_revenue",
+        "gross_margin", "operating_margin", "net_margin", "ebitda_margin",
+        "roic", "roe", "roa",
+        "revenue_growth_yoy", "revenue_growth_3yr_cagr", "earnings_growth_yoy",
+        "debt_to_equity", "net_debt_to_ebitda", "current_ratio",
+        "pe_5yr_avg", "ev_ebitda_5yr_avg", "gross_margin_5yr_avg",
+        "forward_pe_vs_5yr_pct", "gross_margin_vs_5yr_pct",
+    ]
+
+    field_stats = {}
+    for field_name in fields_to_check:
+        col = getattr(ScreenerData, field_name, None)
+        if col is not None:
+            non_null = db.query(func.count(ScreenerData.id)).filter(col.isnot(None)).scalar()
+            field_stats[field_name] = {
+                "non_null": non_null,
+                "pct": round(non_null / total * 100, 1),
+            }
+
+    # Also grab a sample row to show raw values
+    sample = db.query(ScreenerData).filter(ScreenerData.market_cap.isnot(None)).order_by(ScreenerData.market_cap.desc()).first()
+    sample_dict = None
+    if sample:
+        sample_dict = {f: getattr(sample, f, None) for f in fields_to_check}
+        sample_dict["ticker"] = sample.ticker
+        sample_dict["name"] = sample.name
+
+    return {"total": total, "fields": field_stats, "sample_top_company": sample_dict}
 
 
 # ===== Watchlist Endpoints =====

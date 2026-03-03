@@ -53,63 +53,30 @@ def parse_date(date_str: str) -> Optional[date]:
 
 def ingest_stock_list(db: Session) -> list[dict]:
     """Step 1: Pull all stocks, filter to target markets, upsert into companies table."""
-    logger.info("Pulling stock list from FMP stable API...")
+    logger.info("Pulling stock list from FMP...")
     all_stocks = fmp_client.get_stock_list()
     logger.info(f"Got {len(all_stocks)} total stocks from FMP")
 
-    # Log a sample record so we can see the field names
-    if all_stocks and len(all_stocks) > 0:
-        sample = all_stocks[0]
-        logger.info(f"Sample stock record keys: {list(sample.keys())}")
-        logger.info(f"Sample stock record: {sample}")
-
     # Filter to target exchanges and non-empty tickers
-    # The stable API may use different field names, so check multiple possibilities
     target_exchanges = set(settings.TARGET_EXCHANGES)
     filtered = []
     for stock in all_stocks:
         ticker = stock.get("symbol", "")
-        # Try multiple possible field names for exchange
-        exchange = (
-            stock.get("exchangeShortName", "") or
-            stock.get("exchange", "") or
-            stock.get("stockExchange", "") or
-            ""
-        )
+        exchange = stock.get("exchangeShortName", "")
         stype = stock.get("type", "")
-        if not ticker:
+        if not ticker or not exchange:
             continue
-        # If we have exchange info, filter by it; if not, include all
-        if exchange and exchange in target_exchanges:
-            filtered.append(stock)
-        elif not exchange:
-            # No exchange info at all — include it (we'll get exchange from profile later)
+        if stype and stype != "stock":
+            continue
+        if exchange in target_exchanges:
             filtered.append(stock)
 
     logger.info(f"Filtered to {len(filtered)} stocks in target markets")
 
-    # If filtering was too aggressive and got 0, try including all stocks
-    if len(filtered) == 0 and len(all_stocks) > 0:
-        logger.warning("Exchange filter eliminated all stocks! Using unfiltered list (will rely on profile data).")
-        # Just take stocks that have valid symbols
-        filtered = [s for s in all_stocks if s.get("symbol")]
-        logger.info(f"Unfiltered: {len(filtered)} stocks with valid symbols")
-        # Cap at 5000 to avoid overwhelming the API
-        if len(filtered) > 5000:
-            filtered = filtered[:5000]
-            logger.info("Capped unfiltered list at 5000 stocks")
-
-    # Log first few tickers for debugging
-    if filtered:
-        first_tickers = [s.get("symbol", "") for s in filtered[:5]]
-        logger.info(f"First few filtered tickers: {first_tickers}")
-    else:
-        logger.warning("No stocks passed any filter!")
-
     # Upsert into companies table
     for stock in filtered:
         ticker = stock["symbol"]
-        exchange_short = stock.get("exchangeShortName", "") or stock.get("exchange", "") or stock.get("stockExchange", "") or ""
+        exchange_short = stock.get("exchangeShortName", "")
         existing = db.query(Company).filter(
             Company.ticker == ticker,
             Company.exchange_short == exchange_short
@@ -141,12 +108,16 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
     ticker = company.ticker
     time.sleep(delay)  # Rate limiting
 
-    # Pull profile for sector/country info
+    # Pull profile for sector/country info AND forward PE (not available in key-metrics)
     profile = fmp_client.get_company_profile(ticker)
+    profile_forward_pe = None
     if profile:
         company.country = profile.get("country", company.country) or ""
         company.sector = profile.get("sector", company.sector) or ""
         company.industry = profile.get("industry", company.industry) or ""
+        # Forward PE is only reliably available from the profile endpoint
+        if profile.get("forwardPE"):
+            profile_forward_pe = profile["forwardPE"]
     time.sleep(delay)
 
     # Pull annual income statements (last 7 years for 5yr averages + buffer)
@@ -193,6 +164,14 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
             db.add(stmt)
     time.sleep(delay)
 
+    # Pull financial ratios for fields not in key-metrics (like returnOnAssets)
+    ratios_data = fmp_client.get_financial_ratios(ticker, period="annual", limit=7)
+    ratios_by_date = {}
+    for r in ratios_data:
+        r_date = r.get("date", "")[:10]
+        ratios_by_date[r_date] = r
+    time.sleep(delay)
+
     # Pull key metrics (annual, last 7 years)
     metrics_data = fmp_client.get_key_metrics(ticker, period="annual", limit=7)
     for item in metrics_data:
@@ -205,24 +184,30 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
             KeyMetric.period == "annual"
         ).first()
 
+        # Look up corresponding ratios data for this date (for fields only in /ratios)
+        item_date = item.get("date", "")[:10]
+        matching_ratios = ratios_by_date.get(item_date, {})
+
         values = dict(
             calendar_year=item.get("calendarYear"),
             pe_ratio=item.get("peRatio"),
-            forward_pe=item.get("forwardPE") or item.get("peRatio"),
+            # Forward PE: use profile value if available, otherwise fall back to trailing PE
+            forward_pe=profile_forward_pe or item.get("peRatio"),
             price_to_sales=item.get("priceToSalesRatio"),
             price_to_book=item.get("pbRatio"),
             ev_to_ebitda=item.get("enterpriseValueOverEBITDA"),
-            ev_to_revenue=item.get("evToRevenue"),
+            ev_to_revenue=item.get("evToSales"),  # FMP uses "evToSales" not "evToRevenue"
             enterprise_value=item.get("enterpriseValue"),
             market_cap=item.get("marketCap"),
             roic=item.get("roic"),
             roe=item.get("roe"),
-            roa=item.get("returnOnAssets"),
+            # ROA: prefer from /ratios endpoint, fall back to key-metrics returnOnTangibleAssets
+            roa=matching_ratios.get("returnOnAssets") or item.get("returnOnTangibleAssets"),
             revenue_per_share=item.get("revenuePerShare"),
-            earnings_per_share=item.get("earningsYield"),
+            earnings_per_share=item.get("netIncomePerShare"),  # Was "earningsYield" which is E/P ratio, not EPS
             free_cash_flow_per_share=item.get("freeCashFlowPerShare"),
             book_value_per_share=item.get("bookValuePerShare"),
-            dividends_per_share=item.get("dividendYield"),
+            dividends_per_share=item.get("dividendPerShare"),  # Was "dividendYield" which is a percentage
             debt_to_equity=item.get("debtToEquity"),
             net_debt_to_ebitda=item.get("netDebtToEBITDA"),
             current_ratio=item.get("currentRatio"),
@@ -405,6 +390,11 @@ def compute_screener_data(db: Session, company: Company):
         computed_at=datetime.now(timezone.utc),
     )
 
+    # Log fields that are NULL for debugging data quality
+    null_fields = [k for k, v in values.items() if v is None and k not in ("industry", "short_percent_float", "short_ratio")]
+    if len(null_fields) > 10:
+        logger.warning(f"{company.ticker}: {len(null_fields)} NULL fields in screener_data: {null_fields[:8]}...")
+
     if existing:
         for k, v in values.items():
             setattr(existing, k, v)
@@ -437,15 +427,7 @@ def run_full_ingestion(batch_size: int = 50):
     try:
         # Step 1: Get stock list
         ingestion_progress["phase"] = "Pulling stock list from FMP..."
-        filtered_stocks = ingest_stock_list(db)
-
-        # Check if we got any companies
-        if not filtered_stocks or len(filtered_stocks) == 0:
-            error_msg = "Failed to ingest stock list - no stocks returned from FMP. Check API key and connection."
-            ingestion_progress["phase"] = "Failed"
-            ingestion_progress["last_error"] = error_msg
-            logger.error(error_msg)
-            return
+        ingest_stock_list(db)
 
         # Step 2: Pull data for each company
         companies = db.query(Company).filter(Company.is_active == True).all()
@@ -453,13 +435,6 @@ def run_full_ingestion(batch_size: int = 50):
         ingestion_progress["total"] = total
         ingestion_progress["phase"] = "Ingesting company data"
         logger.info(f"Starting data ingestion for {total} companies...")
-
-        if total == 0:
-            error_msg = "No active companies in database after stock list ingestion"
-            ingestion_progress["phase"] = "Failed"
-            ingestion_progress["last_error"] = error_msg
-            logger.error(error_msg)
-            return
 
         for i, company in enumerate(companies):
             try:

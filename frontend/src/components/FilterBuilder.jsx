@@ -10,7 +10,6 @@ const OPERATORS = [
   { value: 'between', label: 'Between' },
 ]
 
-// Group fields for the dropdown
 const FIELD_GROUPS = {
   'Valuation': ['market_cap', 'enterprise_value', 'pe_ratio', 'forward_pe', 'price_to_sales', 'price_to_book', 'ev_to_ebitda', 'ev_to_revenue'],
   'Profitability': ['gross_margin', 'operating_margin', 'net_margin', 'ebitda_margin'],
@@ -18,7 +17,7 @@ const FIELD_GROUPS = {
   'Growth': ['revenue_growth_yoy', 'revenue_growth_3yr_cagr', 'earnings_growth_yoy'],
   'Balance Sheet': ['debt_to_equity', 'net_debt_to_ebitda', 'current_ratio'],
   'Short Interest': ['short_percent_float', 'short_ratio'],
-  'vs 5yr Average (%)': ['forward_pe_vs_5yr_pct', 'ev_ebitda_vs_5yr_pct', 'gross_margin_vs_5yr_pct', 'operating_margin_vs_5yr_pct', 'roic_vs_5yr_pct', 'roe_vs_5yr_pct'],
+  'vs 5yr Average': ['forward_pe_vs_5yr_pct', 'ev_ebitda_vs_5yr_pct', 'gross_margin_vs_5yr_pct', 'operating_margin_vs_5yr_pct', 'roic_vs_5yr_pct', 'roe_vs_5yr_pct'],
   'Historical Averages': ['pe_5yr_avg', 'ev_ebitda_5yr_avg', 'gross_margin_5yr_avg', 'operating_margin_5yr_avg', 'net_margin_5yr_avg', 'roic_5yr_avg', 'roe_5yr_avg'],
   'Info': ['sector', 'industry', 'country', 'exchange'],
 }
@@ -27,178 +26,127 @@ const EMPTY_FILTER = { field: 'market_cap', operator: 'gte', value: '', value2: 
 
 const styles = {
   container: {
-    backgroundColor: 'rgba(17, 24, 39, 0.5)',
-    border: '1px solid rgba(6, 182, 212, 0.2)',
-    borderRadius: '14px',
-    padding: '28px',
-    marginBottom: '24px',
-    boxShadow: '0 8px 32px rgba(6, 182, 212, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05)',
-    transition: 'all 0.3s ease',
-    backdropFilter: 'blur(10px)',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '20px',
   },
   title: {
-    fontSize: '18px',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    marginBottom: '24px',
-    letterSpacing: '-0.5px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#a1a1aa',
+    marginBottom: '16px',
     textTransform: 'uppercase',
-    fontSize: '16px',
+    letterSpacing: '0.5px',
   },
   filterRow: {
     display: 'flex',
-    gap: '12px',
+    gap: '8px',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: '8px',
     flexWrap: 'wrap',
-    padding: '16px',
-    backgroundColor: 'rgba(10, 14, 26, 0.4)',
-    borderRadius: '10px',
-    border: '1px solid rgba(6, 182, 212, 0.15)',
-    transition: 'all 0.3s ease',
-    backdropFilter: 'blur(5px)',
-    '@media (max-width: 768px)': {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-    },
   },
-  fieldSelect: {
-    flex: '1 1 220px',
-    padding: '10px 14px',
-    backgroundColor: 'rgba(10, 14, 26, 0.6)',
-    border: '1px solid rgba(6, 182, 212, 0.2)',
+  select: {
+    flex: '1 1 200px',
+    padding: '8px 12px',
+    backgroundColor: '#09090b',
+    border: '1px solid #27272a',
     borderRadius: '8px',
-    color: '#e6edf3',
-    fontSize: '14px',
+    color: '#fafafa',
+    fontSize: '13px',
     fontWeight: '500',
     outline: 'none',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    minWidth: '160px',
-    backdropFilter: 'blur(5px)',
-  },
-  fieldSelectFocus: {
-    borderColor: '#06b6d4',
-    boxShadow: '0 0 0 3px rgba(6, 182, 212, 0.2)',
-    backgroundColor: 'rgba(10, 14, 26, 0.8)',
+    transition: 'border-color 0.15s ease',
+    minWidth: '140px',
   },
   operatorSelect: {
     flex: '0 0 auto',
-    padding: '10px 14px',
-    backgroundColor: 'rgba(10, 14, 26, 0.6)',
-    border: '1px solid rgba(6, 182, 212, 0.2)',
+    padding: '8px 12px',
+    backgroundColor: '#09090b',
+    border: '1px solid #27272a',
     borderRadius: '8px',
-    color: '#e6edf3',
-    fontSize: '14px',
+    color: '#fafafa',
+    fontSize: '13px',
     fontWeight: '500',
     outline: 'none',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    minWidth: '90px',
-    backdropFilter: 'blur(5px)',
+    transition: 'border-color 0.15s ease',
+    minWidth: '80px',
   },
   input: {
-    flex: '0 1 140px',
-    padding: '10px 14px',
-    backgroundColor: 'rgba(10, 14, 26, 0.6)',
-    border: '1px solid rgba(6, 182, 212, 0.2)',
+    flex: '0 1 120px',
+    padding: '8px 12px',
+    backgroundColor: '#09090b',
+    border: '1px solid #27272a',
     borderRadius: '8px',
-    color: '#e6edf3',
-    fontSize: '14px',
+    color: '#fafafa',
+    fontSize: '13px',
     outline: 'none',
-    transition: 'all 0.3s ease',
-    minWidth: '100px',
-    backdropFilter: 'blur(5px)',
-  },
-  inputFocus: {
-    borderColor: '#06b6d4',
-    boxShadow: '0 0 0 3px rgba(6, 182, 212, 0.2)',
-    backgroundColor: 'rgba(10, 14, 26, 0.8)',
+    transition: 'border-color 0.15s ease',
+    minWidth: '80px',
   },
   andLabel: {
-    color: '#8b949e',
-    fontSize: '14px',
+    color: '#52525b',
+    fontSize: '12px',
     fontWeight: '500',
-    flex: '0 0 auto',
   },
   removeBtn: {
     flex: '0 0 auto',
-    padding: '10px 16px',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    color: '#ef4444',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    padding: '8px 12px',
+    backgroundColor: 'transparent',
+    color: '#52525b',
+    border: '1px solid transparent',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    transition: 'all 0.15s ease',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#3f3f46',
+    marginTop: '12px',
+    marginBottom: '16px',
+  },
+  actions: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '16px',
+    alignItems: 'center',
+  },
+  addBtn: {
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    color: '#71717a',
+    border: '1px dashed #27272a',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    transition: 'all 0.15s ease',
+  },
+  runBtn: {
+    padding: '8px 24px',
+    backgroundColor: '#818cf8',
+    color: '#fafafa',
+    border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '13px',
     fontWeight: '600',
-    transition: 'all 0.3s ease',
-  },
-  removeBtnHover: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderColor: '#ef4444',
-    boxShadow: '0 0 12px rgba(239, 68, 68, 0.2)',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#8b949e',
-    marginTop: '16px',
-    marginBottom: '20px',
-    paddingLeft: '4px',
-    lineHeight: '1.5',
-  },
-  actions: {
-    display: 'flex',
-    gap: '12px',
-    marginTop: '20px',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  addBtn: {
-    padding: '11px 20px',
-    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-    color: '#06b6d4',
-    border: '1px solid rgba(6, 182, 212, 0.4)',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '700',
-    transition: 'all 0.3s ease',
-  },
-  addBtnHover: {
-    backgroundColor: 'rgba(6, 182, 212, 0.15)',
-    boxShadow: '0 0 16px rgba(6, 182, 212, 0.25)',
-  },
-  runBtn: {
-    padding: '11px 32px',
-    background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%)',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '700',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 4px 16px rgba(6, 182, 212, 0.3)',
-  },
-  runBtnHover: {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 24px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)',
-  },
-  runBtnActive: {
-    transform: 'translateY(0)',
+    transition: 'all 0.15s ease',
   },
 }
 
 export default function FilterBuilder({ onRunScreen, loading }) {
   const [fields, setFields] = useState({})
   const [filters, setFilters] = useState([{ ...EMPTY_FILTER }])
-  const [focusedIndex, setFocusedIndex] = useState(null)
-  const [hoveredRemoveBtn, setHoveredRemoveBtn] = useState(null)
-  const [hoveredAddBtn, setHoveredAddBtn] = useState(false)
-  const [hoveredRunBtn, setHoveredRunBtn] = useState(false)
+  const [focusedEl, setFocusedEl] = useState(null)
+  const [hoveredRemove, setHoveredRemove] = useState(null)
+  const [hoveredAdd, setHoveredAdd] = useState(false)
+  const [hoveredRun, setHoveredRun] = useState(false)
 
   useEffect(() => {
     getFields().then(setFields).catch(() => {})
@@ -210,9 +158,7 @@ export default function FilterBuilder({ onRunScreen, loading }) {
     setFilters(updated)
   }
 
-  const addFilter = () => {
-    setFilters([...filters, { ...EMPTY_FILTER }])
-  }
+  const addFilter = () => setFilters([...filters, { ...EMPTY_FILTER }])
 
   const removeFilter = (index) => {
     if (filters.length === 1) return
@@ -228,8 +174,6 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           ? [parseFloat(f.value), parseFloat(f.value2)]
           : fieldDef.type === 'string' ? f.value : parseFloat(f.value)
 
-        // Convert user-friendly values:
-        // Percentages: user enters 20 for 20%, we store as 0.20
         const format = fieldDef.format || ''
         if ((format === 'percent' || format === 'percent_change') && typeof value === 'number') {
           value = value / 100
@@ -248,26 +192,23 @@ export default function FilterBuilder({ onRunScreen, loading }) {
     if (e.key === 'Enter') handleRun()
   }
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const focusStyle = { borderColor: '#818cf8', boxShadow: '0 0 0 2px rgba(129, 140, 248, 0.1)' }
 
   return (
     <div style={styles.container}>
-      <div style={styles.title}>Filter Criteria</div>
+      <div style={styles.title}>Filters</div>
 
       {filters.map((filter, i) => (
-        <div key={i} style={{
-          ...styles.filterRow,
-          ...(isMobile && { flexDirection: 'column', alignItems: 'stretch' }),
-        }}>
+        <div key={i} style={styles.filterRow}>
           <select
             style={{
-              ...styles.fieldSelect,
-              ...(focusedIndex === `field-${i}` && styles.fieldSelectFocus),
+              ...styles.select,
+              ...(focusedEl === `field-${i}` ? focusStyle : {}),
             }}
             value={filter.field}
             onChange={(e) => updateFilter(i, 'field', e.target.value)}
-            onFocus={() => setFocusedIndex(`field-${i}`)}
-            onBlur={() => setFocusedIndex(null)}
+            onFocus={() => setFocusedEl(`field-${i}`)}
+            onBlur={() => setFocusedEl(null)}
           >
             {Object.entries(FIELD_GROUPS).map(([group, fieldNames]) => (
               <optgroup key={group} label={group}>
@@ -281,12 +222,12 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           <select
             style={{
               ...styles.operatorSelect,
-              ...(focusedIndex === `operator-${i}` && styles.fieldSelectFocus),
+              ...(focusedEl === `op-${i}` ? focusStyle : {}),
             }}
             value={filter.operator}
             onChange={(e) => updateFilter(i, 'operator', e.target.value)}
-            onFocus={() => setFocusedIndex(`operator-${i}`)}
-            onBlur={() => setFocusedIndex(null)}
+            onFocus={() => setFocusedEl(`op-${i}`)}
+            onBlur={() => setFocusedEl(null)}
           >
             {OPERATORS.map(op => (
               <option key={op.value} value={op.value}>{op.label}</option>
@@ -296,15 +237,15 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           <input
             style={{
               ...styles.input,
-              ...(focusedIndex === `value-${i}` && styles.inputFocus),
+              ...(focusedEl === `val-${i}` ? focusStyle : {}),
             }}
             type={fields[filter.field]?.type === 'string' ? 'text' : 'number'}
             placeholder={fields[filter.field]?.format === 'currency_compact' ? 'e.g. 800000000' : 'Value'}
             value={filter.value}
             onChange={(e) => updateFilter(i, 'value', e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => setFocusedIndex(`value-${i}`)}
-            onBlur={() => setFocusedIndex(null)}
+            onFocus={() => setFocusedEl(`val-${i}`)}
+            onBlur={() => setFocusedEl(null)}
           />
 
           {filter.operator === 'between' && (
@@ -313,15 +254,15 @@ export default function FilterBuilder({ onRunScreen, loading }) {
               <input
                 style={{
                   ...styles.input,
-                  ...(focusedIndex === `value2-${i}` && styles.inputFocus),
+                  ...(focusedEl === `val2-${i}` ? focusStyle : {}),
                 }}
                 type="number"
                 placeholder="Max"
                 value={filter.value2}
                 onChange={(e) => updateFilter(i, 'value2', e.target.value)}
                 onKeyDown={handleKeyDown}
-                onFocus={() => setFocusedIndex(`value2-${i}`)}
-                onBlur={() => setFocusedIndex(null)}
+                onFocus={() => setFocusedEl(`val2-${i}`)}
+                onBlur={() => setFocusedEl(null)}
               />
             </>
           )}
@@ -329,11 +270,11 @@ export default function FilterBuilder({ onRunScreen, loading }) {
           <button
             style={{
               ...styles.removeBtn,
-              ...(hoveredRemoveBtn === i && styles.removeBtnHover),
+              ...(hoveredRemove === i ? { color: '#f87171', backgroundColor: 'rgba(248, 113, 113, 0.08)' } : {}),
             }}
             onClick={() => removeFilter(i)}
-            onMouseEnter={() => setHoveredRemoveBtn(i)}
-            onMouseLeave={() => setHoveredRemoveBtn(null)}
+            onMouseEnter={() => setHoveredRemove(i)}
+            onMouseLeave={() => setHoveredRemove(null)}
           >
             Remove
           </button>
@@ -341,30 +282,30 @@ export default function FilterBuilder({ onRunScreen, loading }) {
       ))}
 
       <div style={styles.hint}>
-        Tip: For percentage fields, enter the number directly (e.g., "20" for 20%). For "vs 5yr Avg" fields, enter the % change (e.g., "20" means 20% above average).
+        Percentages: enter "20" for 20%. For "vs 5yr Avg" fields, enter the % change above average.
       </div>
 
       <div style={styles.actions}>
         <button
           style={{
             ...styles.addBtn,
-            ...(hoveredAddBtn && styles.addBtnHover),
+            ...(hoveredAdd ? { borderColor: '#3f3f46', color: '#a1a1aa' } : {}),
           }}
           onClick={addFilter}
-          onMouseEnter={() => setHoveredAddBtn(true)}
-          onMouseLeave={() => setHoveredAddBtn(false)}
+          onMouseEnter={() => setHoveredAdd(true)}
+          onMouseLeave={() => setHoveredAdd(false)}
         >
-          + Add Filter
+          + Add filter
         </button>
         <button
           style={{
             ...styles.runBtn,
-            ...(hoveredRunBtn && !loading && styles.runBtnHover),
-            ...(loading && { opacity: 0.75 }),
+            ...(hoveredRun && !loading ? { backgroundColor: '#6366f1' } : {}),
+            ...(loading ? { opacity: 0.7 } : {}),
           }}
           onClick={handleRun}
-          onMouseEnter={() => setHoveredRunBtn(true)}
-          onMouseLeave={() => setHoveredRunBtn(false)}
+          onMouseEnter={() => setHoveredRun(true)}
+          onMouseLeave={() => setHoveredRun(false)}
           disabled={loading}
         >
           {loading ? 'Screening...' : 'Run Screen'}
