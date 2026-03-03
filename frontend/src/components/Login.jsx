@@ -40,26 +40,26 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#09090b', padding:'16px' }}>
+    <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#f8fafc', padding:'16px' }}>
       <div style={{ width:'100%', maxWidth:'380px', animation:'fadeIn 0.4s ease-out' }}>
         <div style={{ textAlign:'center', marginBottom:'40px' }}>
           <div style={{ display:'inline-flex', marginBottom:'16px' }}><Logo size={48} /></div>
-          <div style={{ fontSize:'28px', fontWeight:'900', letterSpacing:'-1px', marginBottom:'6px' }}>
+          <div style={{ fontSize:'28px', fontWeight:'900', letterSpacing:'-1px', marginBottom:'6px', color:'#0f172a' }}>
             Jacob<span style={{ background:'linear-gradient(135deg,#8b5cf6,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>IQ</span>
           </div>
-          <div style={{ fontSize:'14px', color:'#52525b' }}>Global Stock Intelligence</div>
+          <div style={{ fontSize:'14px', color:'#94a3b8' }}>Global Stock Intelligence</div>
         </div>
-        <div style={{ backgroundColor:'#18181b', border:'1px solid #27272a', borderRadius:'16px', padding:'32px 28px' }}>
+        <div style={{ backgroundColor:'#ffffff', border:'1px solid #e2e8f0', borderRadius:'16px', padding:'32px 28px', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
           <form onSubmit={handleSubmit}>
             {error && (
-              <div style={{ color:'#f87171', fontSize:'13px', marginBottom:'16px', padding:'10px 12px', backgroundColor:'rgba(248,113,113,0.06)', borderRadius:'8px', border:'1px solid rgba(248,113,113,0.12)' }}>{error}</div>
+              <div style={{ color:'#ef4444', fontSize:'13px', marginBottom:'16px', padding:'10px 12px', backgroundColor:'rgba(239,68,68,0.06)', borderRadius:'8px', border:'1px solid rgba(239,68,68,0.12)' }}>{error}</div>
             )}
-            <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'#71717a', marginBottom:'8px' }}>Password</label>
+            <label style={{ display:'block', fontSize:'13px', fontWeight:'500', color:'#64748b', marginBottom:'8px' }}>Password</label>
             <input
               style={{
-                width:'100%', padding:'11px 14px', backgroundColor:'#09090b', border:'1px solid #27272a',
-                borderRadius:'10px', color:'#fafafa', fontSize:'14px', outline:'none', transition:'all 0.15s', boxSizing:'border-box',
-                ...(focused ? { borderColor:'#8b5cf6', boxShadow:'0 0 0 3px rgba(139,92,246,0.12)' } : {}),
+                width:'100%', padding:'11px 14px', backgroundColor:'#f8fafc', border:'1px solid #e2e8f0',
+                borderRadius:'10px', color:'#0f172a', fontSize:'14px', outline:'none', transition:'all 0.15s', boxSizing:'border-box',
+                ...(focused ? { borderColor:'#8b5cf6', boxShadow:'0 0 0 3px rgba(139,92,246,0.1)' } : {}),
               }}
               type="password" placeholder="Enter password" value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -70,7 +70,7 @@ export default function Login({ onLogin }) {
               fontSize:'14px', fontWeight:'600', cursor:'pointer', transition:'all 0.15s',
               background:'linear-gradient(135deg,#8b5cf6,#06b6d4)', color:'#fff',
               opacity: loading ? 0.7 : 1,
-              ...(btnHover && !loading ? { filter:'brightness(1.1)', transform:'translateY(-1px)' } : {}),
+              ...(btnHover && !loading ? { filter:'brightness(1.1)', transform:'translateY(-1px)', boxShadow:'0 4px 16px rgba(139,92,246,0.25)' } : {}),
             }} type="submit" disabled={loading}
               onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => setBtnHover(false)}
             >{loading ? 'Signing in...' : 'Sign in'}</button>

@@ -300,6 +300,72 @@ def get_watchlist_tickers(user: str = Depends(get_current_user), db=Depends(get_
     return [i[0] for i in items]
 
 
+# ===== Saved Screens Endpoints =====
+
+class SaveScreenRequest(BaseModel):
+    name: str
+    filters: list[dict]
+
+
+class UpdateScreenRequest(BaseModel):
+    name: str | None = None
+    filters: list[dict] | None = None
+
+
+@app.get("/api/screens")
+def list_saved_screens(user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import SavedScreen
+    import json
+    screens = db.query(SavedScreen).order_by(SavedScreen.updated_at.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "filters": json.loads(s.filters_json),
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        }
+        for s in screens
+    ]
+
+
+@app.post("/api/screens")
+def save_screen(req: SaveScreenRequest, user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import SavedScreen
+    import json
+    screen = SavedScreen(name=req.name, filters_json=json.dumps(req.filters))
+    db.add(screen)
+    db.commit()
+    db.refresh(screen)
+    return {"id": screen.id, "name": screen.name, "status": "saved"}
+
+
+@app.put("/api/screens/{screen_id}")
+def update_screen(screen_id: int, req: UpdateScreenRequest, user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import SavedScreen
+    import json
+    screen = db.query(SavedScreen).filter(SavedScreen.id == screen_id).first()
+    if not screen:
+        raise HTTPException(status_code=404, detail="Screen not found")
+    if req.name is not None:
+        screen.name = req.name
+    if req.filters is not None:
+        screen.filters_json = json.dumps(req.filters)
+    db.commit()
+    return {"id": screen.id, "name": screen.name, "status": "updated"}
+
+
+@app.delete("/api/screens/{screen_id}")
+def delete_screen(screen_id: int, user: str = Depends(get_current_user), db=Depends(get_db)):
+    from backend.models import SavedScreen
+    screen = db.query(SavedScreen).filter(SavedScreen.id == screen_id).first()
+    if not screen:
+        raise HTTPException(status_code=404, detail="Screen not found")
+    db.delete(screen)
+    db.commit()
+    return {"status": "deleted"}
+
+
 # ===== Serve Frontend =====
 
 # In production, the built frontend will be at /app/frontend/dist

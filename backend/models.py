@@ -194,3 +194,15 @@ class WatchlistItem(Base):
     ticker = Column(String(20), nullable=False, unique=True, index=True)
     notes = Column(Text, default="")
     added_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SavedScreen(Base):
+    """Saved screening configurations — reusable filter combinations."""
+    __tablename__ = "saved_screens"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False)
+    filters_json = Column(Text, nullable=False)  # JSON string of filter array
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
+                        onupdate=lambda: datetime.now(timezone.utc))

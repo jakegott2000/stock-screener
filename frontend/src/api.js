@@ -45,4 +45,8 @@ export async function removeFromWatchlist(ticker) {
 }
 export async function getIngestionProgress() { return apiFetch('/admin/progress'); }
 export async function searchStocks(query) { return apiFetch(`/search?q=${encodeURIComponent(query)}`); }
+export async function getSavedScreens() { return apiFetch('/screens'); }
+export async function saveScreen(name, filters) { return apiFetch('/screens', { method: 'POST', body: JSON.stringify({ name, filters }) }); }
+export async function updateScreen(id, data) { return apiFetch(`/screens/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+export async function deleteScreen(id) { return apiFetch(`/screens/${id}`, { method: 'DELETE' }); }
 export function logout() { clearToken(); window.location.reload(); }
