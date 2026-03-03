@@ -10,7 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -21,24 +21,18 @@
         -moz-osx-font-smoothing: grayscale;
       }
       input, select, button, textarea { font-family: inherit; }
-      ::selection { background: rgba(99, 102, 241, 0.3); }
+      ::selection { background: rgba(139, 92, 246, 0.3); }
       ::-webkit-scrollbar { height: 6px; width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
-
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+      @keyframes gradient { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
       .fade-in { animation: fadeIn 0.3s ease-out; }
     </style>
   </head>

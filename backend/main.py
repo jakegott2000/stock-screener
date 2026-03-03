@@ -137,13 +137,26 @@ def trigger_quote_update(user: str = Depends(get_current_user)):
 
 @app.get("/api/admin/stats")
 def get_stats(user: str = Depends(get_current_user), db=Depends(get_db)):
-    """Get database statistics."""
+    """Get database statistics including sync status."""
     from backend.models import Company, ScreenerData
+    from sqlalchemy import func
     total_companies = db.query(Company).count()
     screened_companies = db.query(ScreenerData).count()
+    # Count companies with actual data (non-null gross_margin as proxy)
+    synced_with_data = db.query(func.count(ScreenerData.id)).filter(
+        ScreenerData.gross_margin.isnot(None)
+    ).scalar()
+    progress = get_progress()
     return {
         "total_companies": total_companies,
         "screened_companies": screened_companies,
+        "synced_with_data": synced_with_data,
+        "sync_running": progress.get("running", False),
+        "sync_phase": progress.get("phase", ""),
+        "sync_current": progress.get("current", 0),
+        "sync_total": progress.get("total", 0),
+        "sync_errors": progress.get("errors", 0),
+        "sync_current_ticker": progress.get("current_ticker", ""),
     }
 
 
@@ -196,6 +209,28 @@ def get_data_quality(user: str = Depends(get_current_user), db=Depends(get_db)):
     return {"total": total, "fields": field_stats, "sample_top_company": sample_dict}
 
 
+# ===== Search Endpoint =====
+
+@app.get("/api/search")
+def search_stocks(q: str, user: str = Depends(get_current_user), db=Depends(get_db)):
+    """Search for stocks by ticker or company name. Returns up to 20 matches with all screener fields."""
+    from backend.models import ScreenerData
+    from backend.screener import SCREENER_FIELDS
+    if not q or len(q) < 1:
+        return []
+    query = db.query(ScreenerData).filter(
+        (ScreenerData.ticker.ilike(f"%{q}%")) | (ScreenerData.name.ilike(f"%{q}%"))
+    ).order_by(ScreenerData.market_cap.desc().nullslast()).limit(20).all()
+
+    results = []
+    for r in query:
+        row = {}
+        for field_name in SCREENER_FIELDS:
+            row[field_name] = getattr(r, field_name, None)
+        results.append(row)
+    return results
+
+
 # ===== Watchlist Endpoints =====
 
 class WatchlistAddRequest(BaseModel):
@@ -225,7 +260,10 @@ def get_watchlist(user: str = Depends(get_current_user), db=Depends(get_db)):
             "forward_pe": sd.forward_pe if sd else None,
             "ev_to_ebitda": sd.ev_to_ebitda if sd else None,
             "gross_margin": sd.gross_margin if sd else None,
+            "operating_margin": sd.operating_margin if sd else None,
+            "roic": sd.roic if sd else None,
             "revenue_growth_yoy": sd.revenue_growth_yoy if sd else None,
+            "forward_pe_vs_5yr_pct": sd.forward_pe_vs_5yr_pct if sd else None,
             "sector": sd.sector if sd else None,
         }
         result.append(row)
