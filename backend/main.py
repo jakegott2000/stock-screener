@@ -212,7 +212,7 @@ def get_data_quality(user: str = Depends(get_current_user), db=Depends(get_db)):
 # ===== FMP API Diagnostic =====
 
 @app.get("/api/admin/fmp-debug")
-def fmp_debug():
+def fmp_debug(user: str = Depends(get_current_user)):
     """
     Hit FMP API for AAPL and return raw field names from each endpoint.
     This tells us exactly what keys the stable API returns so we can fix mappings.
@@ -271,6 +271,63 @@ def fmp_debug():
             results["profile"] = "EMPTY or None"
     except Exception as e:
         results["profile_error"] = str(e)[:300]
+
+    # 5) Analyst Estimates - forward revenue, EPS, EBITDA
+    time.sleep(0.3)
+    try:
+        est = fmp_client._get("analyst-estimates", {"symbol": "AAPL", "period": "annual", "limit": 3})
+        if est and isinstance(est, list) and len(est) > 0:
+            results["analyst_estimates_fields"] = sorted(est[0].keys())
+            results["analyst_estimates_sample"] = est[0]
+            results["analyst_estimates_count"] = len(est)
+        else:
+            results["analyst_estimates"] = f"EMPTY or None (raw: {str(est)[:200]})"
+    except Exception as e:
+        results["analyst_estimates_error"] = str(e)[:300]
+
+    # 6) Earnings Surprises (might have forward EPS)
+    time.sleep(0.3)
+    try:
+        earn = fmp_client._get("earnings-surprises", {"symbol": "AAPL"})
+        if earn and isinstance(earn, list) and len(earn) > 0:
+            results["earnings_surprises_fields"] = sorted(earn[0].keys())
+            results["earnings_surprises_sample"] = earn[0]
+        else:
+            results["earnings_surprises"] = f"EMPTY or None"
+    except Exception as e:
+        results["earnings_surprises_error"] = str(e)[:300]
+
+    # 7) Forward valuation / company outlook
+    time.sleep(0.3)
+    try:
+        outlook = fmp_client._get("company-outlook", {"symbol": "AAPL"})
+        if outlook and isinstance(outlook, dict):
+            results["company_outlook_keys"] = sorted(outlook.keys())
+            # Only return field names from nested sections to keep response small
+            for k, v in outlook.items():
+                if isinstance(v, list) and len(v) > 0:
+                    results[f"outlook_{k}_fields"] = sorted(v[0].keys()) if isinstance(v[0], dict) else "non-dict"
+                elif isinstance(v, dict):
+                    results[f"outlook_{k}_fields"] = sorted(v.keys())
+        else:
+            results["company_outlook"] = f"EMPTY or None (raw: {str(outlook)[:200]})"
+    except Exception as e:
+        results["company_outlook_error"] = str(e)[:300]
+
+    # 8) Short interest / shares float
+    time.sleep(0.3)
+    try:
+        sf = fmp_client._get("shares-float", {"symbol": "AAPL"})
+        if sf and isinstance(sf, list) and len(sf) > 0:
+            results["shares_float_fields"] = sorted(sf[0].keys())
+            results["shares_float_sample"] = sf[0]
+        elif sf and isinstance(sf, dict):
+            results["shares_float_fields"] = sorted(sf.keys())
+            results["shares_float_sample"] = sf
+        else:
+            results["shares_float"] = f"EMPTY or None (raw: {str(sf)[:200]})"
+    except Exception as e:
+        results["shares_float_error"] = str(e)[:300]
 
     return results
 

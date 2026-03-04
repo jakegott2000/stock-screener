@@ -4,9 +4,13 @@ Data ingestion pipeline for pulling financial data from FMP and computing derive
 This runs as a scheduled job (daily) or can be triggered manually.
 Steps:
 1. Pull stock list, filter to target markets
-2. For each company: pull income statements + key metrics (with history)
+2. For each company: pull income statements + key metrics + ratios (with history)
 3. Compute derived screening metrics (5yr averages, % vs average, etc.)
 4. Store everything in the database
+
+IMPORTANT: This uses FMP's STABLE API (financialmodelingprep.com/stable/).
+The stable API uses DIFFERENT field names than the legacy v3 API.
+Key differences documented inline below.
 """
 
 import logging
@@ -49,6 +53,13 @@ def parse_date(date_str: str) -> Optional[date]:
         return date.fromisoformat(date_str[:10])
     except (ValueError, TypeError):
         return None
+
+
+def safe_divide(numerator, denominator):
+    """Safely divide two numbers, returning None if either is None or denominator is 0."""
+    if numerator is not None and denominator is not None and denominator != 0:
+        return numerator / denominator
+    return None
 
 
 def ingest_stock_list(db: Session) -> list[dict]:
@@ -104,23 +115,50 @@ def ingest_stock_list(db: Session) -> list[dict]:
 
 
 def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
-    """Step 2: Pull financial data for a single company."""
+    """
+    Step 2: Pull financial data for a single company from FMP STABLE API.
+
+    FMP Stable API field name differences from v3:
+    ──────────────────────────────────────────────
+    KEY-METRICS (stable):
+      - evToEBITDA (v3: enterpriseValueOverEBITDA)
+      - returnOnInvestedCapital (v3: roic)
+      - returnOnEquity (v3: roe)
+      - returnOnAssets IS present (unlike v3 key-metrics)
+      - NO: peRatio, priceToSalesRatio, pbRatio, debtToEquity,
+            interestCoverage, netIncomePerShare, dividendPerShare,
+            revenuePerShare, bookValuePerShare, freeCashFlowPerShare
+      - fiscalYear (v3: calendarYear)
+
+    RATIOS (stable) — where most valuation & per-share data lives:
+      - priceToEarningsRatio (v3 key-metrics: peRatio)
+      - priceToSalesRatio, priceToBookRatio
+      - grossProfitMargin, operatingProfitMargin, netProfitMargin
+      - debtToEquityRatio, interestCoverageRatio
+      - netIncomePerShare, dividendPerShare, freeCashFlowPerShare,
+        bookValuePerShare, revenuePerShare
+
+    INCOME-STATEMENT (stable):
+      - grossProfitRatio IS present
+      - NO: operatingIncomeRatio, ebitdaratio, netIncomeRatio
+            (must compute manually from raw values)
+      - fiscalYear (v3: calendarYear)
+
+    PROFILE (stable):
+      - NO forwardPE (not available in stable API at all)
+    """
     ticker = company.ticker
     time.sleep(delay)  # Rate limiting
 
-    # Pull profile for sector/country info AND forward PE (not available in key-metrics)
+    # ── 1. Profile: sector/country info ──
     profile = fmp_client.get_company_profile(ticker)
-    profile_forward_pe = None
     if profile:
         company.country = profile.get("country", company.country) or ""
         company.sector = profile.get("sector", company.sector) or ""
         company.industry = profile.get("industry", company.industry) or ""
-        # Forward PE is only reliably available from the profile endpoint
-        if profile.get("forwardPE"):
-            profile_forward_pe = profile["forwardPE"]
     time.sleep(delay)
 
-    # Pull annual income statements (last 7 years for 5yr averages + buffer)
+    # ── 2. Income Statements (annual, last 7 years) ──
     income_data = fmp_client.get_income_statements(ticker, period="annual", limit=7)
     for item in income_data:
         stmt_date = parse_date(item.get("date"))
@@ -133,21 +171,24 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
         ).first()
 
         revenue = item.get("revenue")
-        gross = item.get("grossProfit")
-        rev_val = revenue if revenue and revenue != 0 else None
+        operating_income = item.get("operatingIncome")
+        ebitda = item.get("ebitda")
+        net_income = item.get("netIncome")
 
+        # Stable API has grossProfitRatio but NOT the other ratio fields
+        # So we compute them manually from raw values
         values = dict(
             revenue=revenue,
             cost_of_revenue=item.get("costOfRevenue"),
-            gross_profit=gross,
-            gross_profit_ratio=item.get("grossProfitRatio"),
-            operating_income=item.get("operatingIncome"),
-            operating_income_ratio=item.get("operatingIncomeRatio"),
-            ebitda=item.get("ebitda"),
-            ebitda_ratio=item.get("ebitdaratio"),
-            net_income=item.get("netIncome"),
-            net_income_ratio=item.get("netIncomeRatio"),
-            calendar_year=item.get("calendarYear"),
+            gross_profit=item.get("grossProfit"),
+            gross_profit_ratio=item.get("grossProfitRatio"),  # ✓ available in stable
+            operating_income=operating_income,
+            operating_income_ratio=safe_divide(operating_income, revenue),  # COMPUTED (not in stable)
+            ebitda=ebitda,
+            ebitda_ratio=safe_divide(ebitda, revenue),  # COMPUTED (not in stable)
+            net_income=net_income,
+            net_income_ratio=safe_divide(net_income, revenue),  # COMPUTED (not in stable)
+            calendar_year=item.get("fiscalYear") or item.get("calendarYear"),  # stable uses fiscalYear
             revenue_growth=None,  # Computed later
         )
 
@@ -164,7 +205,8 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
             db.add(stmt)
     time.sleep(delay)
 
-    # Pull financial ratios for fields not in key-metrics (like returnOnAssets)
+    # ── 3. Financial Ratios (annual, last 7 years) ──
+    # In the stable API, THIS is where PE, P/S, P/B, margins, per-share data lives
     ratios_data = fmp_client.get_financial_ratios(ticker, period="annual", limit=7)
     ratios_by_date = {}
     for r in ratios_data:
@@ -172,7 +214,7 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
         ratios_by_date[r_date] = r
     time.sleep(delay)
 
-    # Pull key metrics (annual, last 7 years)
+    # ── 4. Key Metrics (annual, last 7 years) ──
     metrics_data = fmp_client.get_key_metrics(ticker, period="annual", limit=7)
     for item in metrics_data:
         metric_date = parse_date(item.get("date"))
@@ -184,34 +226,42 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
             KeyMetric.period == "annual"
         ).first()
 
-        # Look up corresponding ratios data for this date (for fields only in /ratios)
+        # Look up corresponding ratios data for this date
         item_date = item.get("date", "")[:10]
-        matching_ratios = ratios_by_date.get(item_date, {})
+        r = ratios_by_date.get(item_date, {})
 
         values = dict(
-            calendar_year=item.get("calendarYear"),
-            pe_ratio=item.get("peRatio"),
-            # Forward PE: use profile value if available, otherwise fall back to trailing PE
-            forward_pe=profile_forward_pe or item.get("peRatio"),
-            price_to_sales=item.get("priceToSalesRatio"),
-            price_to_book=item.get("pbRatio"),
-            ev_to_ebitda=item.get("enterpriseValueOverEBITDA"),
-            ev_to_revenue=item.get("evToSales"),  # FMP uses "evToSales" not "evToRevenue"
-            enterprise_value=item.get("enterpriseValue"),
-            market_cap=item.get("marketCap"),
-            roic=item.get("roic"),
-            roe=item.get("roe"),
-            # ROA: prefer from /ratios endpoint, fall back to key-metrics returnOnTangibleAssets
-            roa=matching_ratios.get("returnOnAssets") or item.get("returnOnTangibleAssets"),
-            revenue_per_share=item.get("revenuePerShare"),
-            earnings_per_share=item.get("netIncomePerShare"),  # Was "earningsYield" which is E/P ratio, not EPS
-            free_cash_flow_per_share=item.get("freeCashFlowPerShare"),
-            book_value_per_share=item.get("bookValuePerShare"),
-            dividends_per_share=item.get("dividendPerShare"),  # Was "dividendYield" which is a percentage
-            debt_to_equity=item.get("debtToEquity"),
-            net_debt_to_ebitda=item.get("netDebtToEBITDA"),
-            current_ratio=item.get("currentRatio"),
-            interest_coverage=item.get("interestCoverage"),
+            calendar_year=item.get("fiscalYear") or item.get("calendarYear"),
+
+            # ── Valuation: from RATIOS (not in stable key-metrics) ──
+            pe_ratio=r.get("priceToEarningsRatio"),               # v3 key-metrics: peRatio
+            forward_pe=r.get("priceToEarningsRatio"),              # No forwardPE in stable; use trailing as fallback
+            price_to_sales=r.get("priceToSalesRatio"),             # v3 key-metrics: priceToSalesRatio
+            price_to_book=r.get("priceToBookRatio"),               # v3 key-metrics: pbRatio
+
+            # ── Enterprise value metrics: from KEY-METRICS ──
+            ev_to_ebitda=item.get("evToEBITDA"),                   # v3: enterpriseValueOverEBITDA
+            ev_to_revenue=item.get("evToSales"),                   # ✓ same in both
+            enterprise_value=item.get("enterpriseValue"),          # ✓ same in both
+            market_cap=item.get("marketCap"),                      # ✓ same in both
+
+            # ── Returns: from KEY-METRICS (different names in stable!) ──
+            roic=item.get("returnOnInvestedCapital"),              # v3: roic
+            roe=item.get("returnOnEquity"),                        # v3: roe
+            roa=item.get("returnOnAssets"),                        # ✓ in stable key-metrics!
+
+            # ── Per-share: from RATIOS (not in stable key-metrics) ──
+            revenue_per_share=r.get("revenuePerShare"),            # v3 key-metrics: revenuePerShare
+            earnings_per_share=r.get("netIncomePerShare"),         # v3 key-metrics: netIncomePerShare
+            free_cash_flow_per_share=r.get("freeCashFlowPerShare"),
+            book_value_per_share=r.get("bookValuePerShare"),
+            dividends_per_share=r.get("dividendPerShare"),
+
+            # ── Debt/leverage: MIXED sources ──
+            debt_to_equity=r.get("debtToEquityRatio"),             # v3 key-metrics: debtToEquity
+            net_debt_to_ebitda=item.get("netDebtToEBITDA"),        # ✓ in stable key-metrics
+            current_ratio=item.get("currentRatio"),                # ✓ in stable key-metrics
+            interest_coverage=r.get("interestCoverageRatio"),      # v3 key-metrics: interestCoverage
         )
 
         if existing:
@@ -321,7 +371,7 @@ def compute_screener_data(db: Session, company: Company):
     if len(income_stmts) >= 2 and income_stmts[0].net_income and income_stmts[1].net_income and income_stmts[1].net_income != 0:
         earnings_growth_yoy = (income_stmts[0].net_income - income_stmts[1].net_income) / abs(income_stmts[1].net_income)
 
-    # Current forward PE - use the latest from key_metrics
+    # Current forward PE and trailing PE
     forward_pe = latest_metric.forward_pe if latest_metric else None
     current_pe = latest_metric.pe_ratio if latest_metric else None
 
