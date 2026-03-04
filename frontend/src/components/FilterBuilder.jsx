@@ -8,12 +8,13 @@ const OPERATORS = [
 ]
 
 const FIELD_GROUPS = {
-  'Valuation': ['market_cap', 'enterprise_value', 'pe_ratio', 'forward_pe', 'price_to_sales', 'price_to_book', 'ev_to_ebitda', 'ev_to_revenue'],
+  'Valuation (Trailing)': ['market_cap', 'enterprise_value', 'pe_ratio', 'price_to_sales', 'price_to_book', 'ev_to_ebitda', 'ev_to_revenue'],
+  'Valuation (Forward)': ['forward_pe', 'forward_ev_to_ebitda', 'forward_ev_to_ebit'],
   'Profitability': ['gross_margin', 'operating_margin', 'net_margin', 'ebitda_margin'],
   'Returns': ['roic', 'roe', 'roa'],
   'Growth': ['revenue_growth_yoy', 'revenue_growth_3yr_cagr', 'earnings_growth_yoy'],
   'Balance Sheet': ['debt_to_equity', 'net_debt_to_ebitda', 'current_ratio'],
-  'Short Interest': ['short_percent_float', 'short_ratio'],
+  'Shares Float': ['float_shares', 'outstanding_shares', 'free_float_pct'],
   'vs 5yr Average': ['forward_pe_vs_5yr_pct', 'ev_ebitda_vs_5yr_pct', 'gross_margin_vs_5yr_pct', 'operating_margin_vs_5yr_pct', 'roic_vs_5yr_pct', 'roe_vs_5yr_pct'],
   'Historical Avgs': ['pe_5yr_avg', 'ev_ebitda_5yr_avg', 'gross_margin_5yr_avg', 'operating_margin_5yr_avg', 'net_margin_5yr_avg', 'roic_5yr_avg', 'roe_5yr_avg'],
   'Info': ['sector', 'industry', 'country', 'exchange'],
