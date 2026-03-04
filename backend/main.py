@@ -209,6 +209,72 @@ def get_data_quality(user: str = Depends(get_current_user), db=Depends(get_db)):
     return {"total": total, "fields": field_stats, "sample_top_company": sample_dict}
 
 
+# ===== FMP API Diagnostic =====
+
+@app.get("/api/admin/fmp-debug")
+def fmp_debug():
+    """
+    Hit FMP API for AAPL and return raw field names from each endpoint.
+    This tells us exactly what keys the stable API returns so we can fix mappings.
+    """
+    from backend.fmp_client import fmp_client
+    import time
+
+    results = {}
+
+    # 1) Key Metrics - this is where most valuation fields come from
+    try:
+        km = fmp_client.get_key_metrics("AAPL", period="annual", limit=1)
+        if km and len(km) > 0:
+            results["key_metrics_fields"] = sorted(km[0].keys())
+            results["key_metrics_sample"] = km[0]
+        else:
+            results["key_metrics"] = "EMPTY or None"
+    except Exception as e:
+        results["key_metrics_error"] = str(e)[:300]
+
+    time.sleep(0.3)
+
+    # 2) Income Statement - margins come from here
+    try:
+        inc = fmp_client.get_income_statements("AAPL", period="annual", limit=1)
+        if inc and len(inc) > 0:
+            results["income_statement_fields"] = sorted(inc[0].keys())
+            results["income_statement_sample"] = inc[0]
+        else:
+            results["income_statement"] = "EMPTY or None"
+    except Exception as e:
+        results["income_statement_error"] = str(e)[:300]
+
+    time.sleep(0.3)
+
+    # 3) Ratios - ROA and other ratios
+    try:
+        ratios = fmp_client.get_financial_ratios("AAPL", period="annual", limit=1)
+        if ratios and len(ratios) > 0:
+            results["ratios_fields"] = sorted(ratios[0].keys())
+            results["ratios_sample"] = ratios[0]
+        else:
+            results["ratios"] = "EMPTY or None"
+    except Exception as e:
+        results["ratios_error"] = str(e)[:300]
+
+    time.sleep(0.3)
+
+    # 4) Profile - forward PE and sector info
+    try:
+        profile = fmp_client.get_company_profile("AAPL")
+        if profile:
+            results["profile_fields"] = sorted(profile.keys())
+            results["profile_sample"] = profile
+        else:
+            results["profile"] = "EMPTY or None"
+    except Exception as e:
+        results["profile_error"] = str(e)[:300]
+
+    return results
+
+
 # ===== Search Endpoint =====
 
 @app.get("/api/search")
