@@ -127,11 +127,15 @@ class ScreenerData(Base):
     enterprise_value = Column(Float)
     last_price = Column(Float)
     pe_ratio = Column(Float)
-    forward_pe = Column(Float)
     price_to_sales = Column(Float)
     price_to_book = Column(Float)
     ev_to_ebitda = Column(Float)
     ev_to_revenue = Column(Float)
+
+    # Forward valuation (from analyst consensus estimates)
+    forward_pe = Column(Float)            # price / next-year EPS estimate
+    forward_ev_to_ebitda = Column(Float)  # EV / next-year EBITDA estimate
+    forward_ev_to_ebit = Column(Float)    # EV / next-year EBIT estimate
 
     # Current profitability
     gross_margin = Column(Float)  # as decimal, e.g. 0.45 = 45%
@@ -154,7 +158,12 @@ class ScreenerData(Base):
     net_debt_to_ebitda = Column(Float)
     current_ratio = Column(Float)
 
-    # Short interest (when available)
+    # Shares float data
+    float_shares = Column(Float)
+    outstanding_shares = Column(Float)
+    free_float_pct = Column(Float)  # percentage, e.g. 99.77
+
+    # Short interest (when available — not currently in FMP stable API)
     short_percent_float = Column(Float)
     short_ratio = Column(Float)
 

@@ -34,15 +34,19 @@ SCREENER_FIELDS = {
     "sector": {"label": "Sector", "type": "string"},
     "industry": {"label": "Industry", "type": "string"},
 
-    # Valuation
+    # Valuation (trailing)
     "market_cap": {"label": "Market Cap", "type": "number", "format": "currency_compact"},
     "enterprise_value": {"label": "Enterprise Value", "type": "number", "format": "currency_compact"},
     "pe_ratio": {"label": "P/E Ratio (TTM)", "type": "number", "format": "decimal2"},
-    "forward_pe": {"label": "Forward P/E", "type": "number", "format": "decimal2"},
     "price_to_sales": {"label": "Price/Sales", "type": "number", "format": "decimal2"},
     "price_to_book": {"label": "Price/Book", "type": "number", "format": "decimal2"},
-    "ev_to_ebitda": {"label": "EV/EBITDA", "type": "number", "format": "decimal2"},
+    "ev_to_ebitda": {"label": "EV/EBITDA (TTM)", "type": "number", "format": "decimal2"},
     "ev_to_revenue": {"label": "EV/Revenue", "type": "number", "format": "decimal2"},
+
+    # Forward valuation (analyst consensus)
+    "forward_pe": {"label": "Forward P/E", "type": "number", "format": "decimal2"},
+    "forward_ev_to_ebitda": {"label": "Forward EV/EBITDA", "type": "number", "format": "decimal2"},
+    "forward_ev_to_ebit": {"label": "Forward EV/EBIT", "type": "number", "format": "decimal2"},
 
     # Profitability
     "gross_margin": {"label": "Gross Margin", "type": "number", "format": "percent"},
@@ -65,9 +69,10 @@ SCREENER_FIELDS = {
     "net_debt_to_ebitda": {"label": "Net Debt/EBITDA", "type": "number", "format": "decimal2"},
     "current_ratio": {"label": "Current Ratio", "type": "number", "format": "decimal2"},
 
-    # Short Interest
-    "short_percent_float": {"label": "Short % Float", "type": "number", "format": "percent"},
-    "short_ratio": {"label": "Short Ratio", "type": "number", "format": "decimal2"},
+    # Shares Float
+    "float_shares": {"label": "Float Shares", "type": "number", "format": "currency_compact"},
+    "outstanding_shares": {"label": "Shares Outstanding", "type": "number", "format": "currency_compact"},
+    "free_float_pct": {"label": "Free Float %", "type": "number", "format": "decimal2"},
 
     # Historical Averages
     "pe_5yr_avg": {"label": "P/E (5yr Avg)", "type": "number", "format": "decimal2"},

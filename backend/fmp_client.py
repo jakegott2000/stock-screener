@@ -114,6 +114,28 @@ class FMPClient:
         })
         return data if isinstance(data, list) else []
 
+    # ── Analyst Estimates ──────────────────────────────────────────
+
+    def get_analyst_estimates(self, ticker: str, period: str = "annual", limit: int = 5) -> list[dict]:
+        """Get analyst consensus estimates (forward revenue, EPS, EBITDA, EBIT)."""
+        data = self._get("analyst-estimates", {
+            "symbol": ticker,
+            "period": period,
+            "limit": str(limit)
+        })
+        return data if isinstance(data, list) else []
+
+    # ── Shares Float ──────────────────────────────────────────────
+
+    def get_shares_float(self, ticker: str) -> Optional[dict]:
+        """Get shares float data (float shares, outstanding shares, free float %)."""
+        data = self._get("shares-float", {"symbol": ticker})
+        if data and isinstance(data, list) and len(data) > 0:
+            return data[0]
+        if data and isinstance(data, dict):
+            return data
+        return None
+
     # ── Quotes ───────────────────────────────────────────────────
 
     def get_quote(self, ticker: str) -> Optional[dict]:

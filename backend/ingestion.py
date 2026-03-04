@@ -235,7 +235,7 @@ def ingest_company_data(db: Session, company: Company, delay: float = 0.3):
 
             # ── Valuation: from RATIOS (not in stable key-metrics) ──
             pe_ratio=r.get("priceToEarningsRatio"),               # v3 key-metrics: peRatio
-            forward_pe=r.get("priceToEarningsRatio"),              # No forwardPE in stable; use trailing as fallback
+            forward_pe=None,  # Now computed from analyst estimates in compute_screener_data
             price_to_sales=r.get("priceToSalesRatio"),             # v3 key-metrics: priceToSalesRatio
             price_to_book=r.get("priceToBookRatio"),               # v3 key-metrics: pbRatio
 
@@ -293,8 +293,15 @@ def compute_revenue_growth(db: Session, company: Company):
     db.commit()
 
 
-def compute_screener_data(db: Session, company: Company):
-    """Step 3: Compute derived screening metrics for a company."""
+def compute_screener_data(db: Session, company: Company, delay: float = 0.3):
+    """
+    Step 3: Compute derived screening metrics for a company.
+
+    This pulls additional data from FMP (analyst estimates, shares float)
+    and combines it with the stored financial data to compute forward metrics.
+    """
+    ticker = company.ticker
+
     # Get latest income statement
     latest_income = (
         db.query(IncomeStatement)
@@ -371,9 +378,76 @@ def compute_screener_data(db: Session, company: Company):
     if len(income_stmts) >= 2 and income_stmts[0].net_income and income_stmts[1].net_income and income_stmts[1].net_income != 0:
         earnings_growth_yoy = (income_stmts[0].net_income - income_stmts[1].net_income) / abs(income_stmts[1].net_income)
 
-    # Current forward PE and trailing PE
-    forward_pe = latest_metric.forward_pe if latest_metric else None
     current_pe = latest_metric.pe_ratio if latest_metric else None
+    current_ev = latest_metric.enterprise_value if latest_metric else None
+
+    # ── Forward Metrics from Analyst Estimates ──
+    # Pull consensus estimates and find the NEXT fiscal year (NTM)
+    forward_pe = None
+    forward_ev_to_ebitda = None
+    forward_ev_to_ebit = None
+
+    time.sleep(delay)
+    try:
+        estimates = fmp_client.get_analyst_estimates(ticker, period="annual", limit=5)
+        if estimates:
+            # Get current price from profile for forward PE computation
+            current_price = None
+            profile = fmp_client.get_company_profile(ticker)
+            if profile:
+                current_price = profile.get("price")
+            time.sleep(delay)
+
+            # Find the nearest FUTURE estimate (NTM = next twelve months)
+            # Estimates are sorted by date, pick the one closest to now but in the future
+            today = date.today()
+            ntm_estimate = None
+            for est in sorted(estimates, key=lambda e: e.get("date", "")):
+                est_date = parse_date(est.get("date"))
+                if est_date and est_date > today:
+                    ntm_estimate = est
+                    break
+
+            # If no future estimate, use the first one (most recent)
+            if not ntm_estimate and estimates:
+                ntm_estimate = estimates[0]
+
+            if ntm_estimate:
+                est_eps = ntm_estimate.get("epsAvg")
+                est_ebitda = ntm_estimate.get("ebitdaAvg")
+                est_ebit = ntm_estimate.get("ebitAvg")
+
+                # Forward P/E = current price / next-year EPS estimate
+                if current_price and est_eps and est_eps > 0:
+                    forward_pe = current_price / est_eps
+
+                # Forward EV/EBITDA = current EV / next-year EBITDA estimate
+                if current_ev and est_ebitda and est_ebitda > 0:
+                    forward_ev_to_ebitda = current_ev / est_ebitda
+
+                # Forward EV/EBIT = current EV / next-year EBIT estimate
+                if current_ev and est_ebit and est_ebit > 0:
+                    forward_ev_to_ebit = current_ev / est_ebit
+
+                logger.info(f"{ticker}: Forward metrics — PE={forward_pe:.1f}, EV/EBITDA={forward_ev_to_ebitda:.1f}, EV/EBIT={forward_ev_to_ebit:.1f}" if all(v is not None for v in [forward_pe, forward_ev_to_ebitda, forward_ev_to_ebit]) else f"{ticker}: Some forward metrics unavailable")
+
+    except Exception as e:
+        logger.warning(f"{ticker}: Failed to compute forward metrics: {e}")
+
+    # ── Shares Float Data ──
+    float_shares = None
+    outstanding_shares = None
+    free_float_pct = None
+
+    time.sleep(delay)
+    try:
+        float_data = fmp_client.get_shares_float(ticker)
+        if float_data:
+            float_shares = float_data.get("floatShares")
+            outstanding_shares = float_data.get("outstandingShares")
+            free_float_pct = float_data.get("freeFloat")
+    except Exception as e:
+        logger.warning(f"{ticker}: Failed to get shares float: {e}")
 
     # Build screener data row
     existing = db.query(ScreenerData).filter(ScreenerData.company_id == company.id).first()
@@ -389,11 +463,15 @@ def compute_screener_data(db: Session, company: Company):
         market_cap=latest_metric.market_cap if latest_metric else None,
         enterprise_value=latest_metric.enterprise_value if latest_metric else None,
         pe_ratio=current_pe,
-        forward_pe=forward_pe,
         price_to_sales=latest_metric.price_to_sales if latest_metric else None,
         price_to_book=latest_metric.price_to_book if latest_metric else None,
         ev_to_ebitda=latest_metric.ev_to_ebitda if latest_metric else None,
         ev_to_revenue=latest_metric.ev_to_revenue if latest_metric else None,
+
+        # Forward valuation from analyst consensus
+        forward_pe=forward_pe,
+        forward_ev_to_ebitda=forward_ev_to_ebitda,
+        forward_ev_to_ebit=forward_ev_to_ebit,
 
         gross_margin=latest_income.gross_profit_ratio if latest_income else None,
         operating_margin=latest_income.operating_income_ratio if latest_income else None,
@@ -411,6 +489,11 @@ def compute_screener_data(db: Session, company: Company):
         debt_to_equity=latest_metric.debt_to_equity if latest_metric else None,
         net_debt_to_ebitda=latest_metric.net_debt_to_ebitda if latest_metric else None,
         current_ratio=latest_metric.current_ratio if latest_metric else None,
+
+        # Shares float
+        float_shares=float_shares,
+        outstanding_shares=outstanding_shares,
+        free_float_pct=free_float_pct,
 
         pe_5yr_avg=pe_5yr_avg,
         ev_ebitda_5yr_avg=ev_ebitda_5yr_avg,
