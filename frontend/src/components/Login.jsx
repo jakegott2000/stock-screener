@@ -65,15 +65,16 @@ export default function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} autoFocus
             />
-            <button style={{
+            <button className="btn-press btn-glow btn-ripple" style={{
               width:'100%', padding:'11px', marginTop:'20px', border:'none', borderRadius:'10px',
-              fontSize:'14px', fontWeight:'600', cursor:'pointer', transition:'all 0.15s',
-              background:'linear-gradient(135deg,#8b5cf6,#06b6d4)', color:'#fff',
-              opacity: loading ? 0.7 : 1,
-              ...(btnHover && !loading ? { filter:'brightness(1.1)', transform:'translateY(-1px)', boxShadow:'0 4px 16px rgba(139,92,246,0.25)' } : {}),
+              fontSize:'14px', fontWeight:'700', cursor:'pointer', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+              background: loading ? '#94a3b8' : 'linear-gradient(135deg,#8b5cf6,#06b6d4)', color:'#fff',
+              boxShadow:'0 2px 12px rgba(139,92,246,0.2)',
+              opacity: loading ? 0.8 : 1,
+              ...(btnHover && !loading ? { filter:'brightness(1.08)', boxShadow:'0 6px 24px rgba(139,92,246,0.3)' } : {}),
             }} type="submit" disabled={loading}
               onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => setBtnHover(false)}
-            >{loading ? 'Signing in...' : 'Sign in'}</button>
+            >{loading ? '⟳ Signing in...' : '→ Sign in'}</button>
           </form>
         </div>
       </div>

@@ -110,9 +110,10 @@ export default function FilterBuilder({ onRunScreen, loading, onSaveScreen }) {
               onKeyDown={(e) => { if (e.key==='Enter') run() }}
               onFocus={() => setFocused(`v2${i}`)} onBlur={() => setFocused(null)} />
           </>}
-          <button style={{
+          <button className="btn-press" style={{
             ...inputBase, cursor:'pointer', border:'1px solid transparent', color:'#cbd5e1',
-            ...(hovRemove===i ? { color:'#ef4444', backgroundColor:'rgba(239,68,68,0.04)' } : {}),
+            transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+            ...(hovRemove===i ? { color:'#ef4444', backgroundColor:'rgba(239,68,68,0.06)', transform:'scale(1.15) rotate(90deg)' } : {}),
           }} onClick={() => remove(i)} onMouseEnter={() => setHovRemove(i)} onMouseLeave={() => setHovRemove(null)}>✕</button>
         </div>
       ))}
@@ -122,46 +123,48 @@ export default function FilterBuilder({ onRunScreen, loading, onSaveScreen }) {
       </div>
 
       <div style={{ display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap' }}>
-        <button style={{
+        <button className="btn-press" style={{
           padding:'8px 16px', backgroundColor:'transparent', color:'#94a3b8',
           border:'1px dashed #e2e8f0', borderRadius:'8px', cursor:'pointer',
-          fontSize:'13px', fontWeight:'500', transition:'all 0.15s',
-          ...(hovAdd ? { borderColor:'#cbd5e1', color:'#64748b' } : {}),
+          fontSize:'13px', fontWeight:'500', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+          ...(hovAdd ? { borderColor:'#8b5cf6', color:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.03)', borderStyle:'solid' } : {}),
         }} onClick={add} onMouseEnter={() => setHovAdd(true)} onMouseLeave={() => setHovAdd(false)}>+ Add filter</button>
 
-        <button style={{
+        <button className="btn-press btn-glow btn-ripple" style={{
           padding:'8px 28px', border:'none', borderRadius:'8px', cursor:'pointer',
-          fontSize:'13px', fontWeight:'700', transition:'all 0.15s', color:'#fff',
-          background:'linear-gradient(135deg,#8b5cf6,#06b6d4)',
-          opacity: loading ? 0.6 : 1,
-          ...(hovRun && !loading ? { filter:'brightness(1.1)', transform:'translateY(-1px)', boxShadow:'0 4px 16px rgba(139,92,246,0.2)' } : {}),
+          fontSize:'13px', fontWeight:'700', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', color:'#fff',
+          background: loading ? '#94a3b8' : 'linear-gradient(135deg,#8b5cf6,#06b6d4)',
+          boxShadow:'0 2px 12px rgba(139,92,246,0.2)',
+          opacity: loading ? 0.8 : 1,
+          ...(hovRun && !loading ? { filter:'brightness(1.08)', boxShadow:'0 6px 24px rgba(139,92,246,0.3)' } : {}),
         }} onClick={run} disabled={loading}
           onMouseEnter={() => setHovRun(true)} onMouseLeave={() => setHovRun(false)}
-        >{loading ? 'Screening...' : 'Run Screen'}</button>
+        >{loading ? '⟳ Screening...' : '▶ Run Screen'}</button>
 
         {/* Save screen button */}
         {!showSaveInput ? (
-          <button style={{
+          <button className="btn-press" style={{
             padding:'8px 16px', backgroundColor:'transparent', color:'#94a3b8',
             border:'1px solid #e2e8f0', borderRadius:'8px', cursor:'pointer',
-            fontSize:'13px', fontWeight:'500', transition:'all 0.15s',
-            ...(hovSave ? { borderColor:'#8b5cf6', color:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.04)' } : {}),
+            fontSize:'13px', fontWeight:'500', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+            ...(hovSave ? { borderColor:'#8b5cf6', color:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.04)', boxShadow:'0 2px 12px rgba(139,92,246,0.08)' } : {}),
           }} onClick={() => setShowSaveInput(true)}
             onMouseEnter={() => setHovSave(true)} onMouseLeave={() => setHovSave(false)}
           >💾 Save Screen</button>
         ) : (
-          <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
+          <div style={{ display:'flex', gap:'6px', alignItems:'center', animation:'popIn 0.2s ease-out' }}>
             <input style={{ ...inputBase, width:'180px' }}
               placeholder="Screen name..." value={saveName} onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={(e) => { if (e.key==='Enter') handleSave(); if (e.key==='Escape') setShowSaveInput(false) }}
               autoFocus />
-            <button style={{
+            <button className="btn-press" style={{
               padding:'8px 14px', border:'none', borderRadius:'8px', cursor:'pointer',
-              fontSize:'12px', fontWeight:'600', color:'#fff', background:'#8b5cf6', transition:'all 0.15s',
+              fontSize:'12px', fontWeight:'600', color:'#fff', background:'#8b5cf6', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+              boxShadow:'0 2px 8px rgba(139,92,246,0.2)',
             }} onClick={handleSave}>Save</button>
-            <button style={{
+            <button className="btn-press" style={{
               padding:'8px 10px', border:'none', borderRadius:'8px', cursor:'pointer',
-              fontSize:'12px', color:'#94a3b8', background:'transparent', transition:'all 0.15s',
+              fontSize:'12px', color:'#94a3b8', background:'transparent', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
             }} onClick={() => { setShowSaveInput(false); setSaveName('') }}>Cancel</button>
           </div>
         )}

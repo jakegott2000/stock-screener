@@ -142,9 +142,9 @@ def get_stats(user: str = Depends(get_current_user), db=Depends(get_db)):
     from sqlalchemy import func
     total_companies = db.query(Company).count()
     screened_companies = db.query(ScreenerData).count()
-    # Count companies with actual data (non-null gross_margin as proxy)
+    # Count companies with actual financial data (market_cap as most reliable proxy)
     synced_with_data = db.query(func.count(ScreenerData.id)).filter(
-        ScreenerData.gross_margin.isnot(None)
+        ScreenerData.market_cap.isnot(None)
     ).scalar()
     progress = get_progress()
     return {
@@ -328,6 +328,38 @@ def fmp_debug(user: str = Depends(get_current_user)):
             results["shares_float"] = f"EMPTY or None (raw: {str(sf)[:200]})"
     except Exception as e:
         results["shares_float_error"] = str(e)[:300]
+
+    # 9) V3 short interest attempts — stable API doesn't have short interest,
+    #    but v3 might have it under different endpoint paths
+    import httpx
+    v3_base = "https://financialmodelingprep.com/api/v3"
+    v4_base = "https://financialmodelingprep.com/api/v4"
+    api_key = fmp_client.api_key
+
+    for label, url in [
+        ("v4_short_interest", f"{v4_base}/short-interest/AAPL?apikey={api_key}"),
+        ("v4_commitment_report", f"{v4_base}/commitment_of_traders_report/AAPL?apikey={api_key}"),
+        ("v3_quote_full", f"{v3_base}/quote/AAPL?apikey={api_key}"),
+    ]:
+        time.sleep(0.3)
+        try:
+            resp = httpx.get(url, timeout=10)
+            data = resp.json()
+            if isinstance(data, list) and len(data) > 0:
+                results[f"{label}_fields"] = sorted(data[0].keys())
+                # For quote, only show short-related fields
+                if "quote" in label:
+                    short_fields = {k: v for k, v in data[0].items()
+                                    if any(s in k.lower() for s in ["short", "float", "shares"])}
+                    results[f"{label}_short_fields"] = short_fields if short_fields else "No short-related fields"
+                else:
+                    results[f"{label}_sample"] = data[0]
+            elif isinstance(data, dict) and "Error" not in str(data):
+                results[f"{label}_fields"] = sorted(data.keys())
+            else:
+                results[label] = f"Error or empty: {str(data)[:200]}"
+        except Exception as e:
+            results[f"{label}_error"] = str(e)[:200]
 
     return results
 
